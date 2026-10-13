@@ -10,7 +10,7 @@
              Title="{Binding Title}"
              Tagline="{Binding Tagline}"
              Width="1280" Height="800" MinWidth="640" MinHeight="420"
-             WindowStartupLocation="CenterScreen">
+             WindowStartupLocation="CenterScreen" WindowState="Maximized">
 
     <ui:NxWindow.TitleBarContent>
         <StackPanel Orientation="Horizontal">

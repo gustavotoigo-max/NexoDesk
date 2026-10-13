@@ -26,6 +26,7 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
 
     // Estado do diff por regiões: hash de cada bloco do quadro anterior.
     private ulong[]? _tileHashes;
+    private bool[]? _tileLossy;   // bloco enviado provisoriamente em JPEG (será refinado p/ PNG ao parar)
     private int _tileCols;
     private int _tileRows;
     private long _tileNextTicks;
@@ -76,6 +77,7 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
             _lastHash = 0;
             _nextTicks = 0;
             _tileHashes = null;
+            _tileLossy = null;
             _tileNextTicks = 0;
         }
     }
@@ -113,6 +115,7 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
                 _tileCols = (size.Width + TileSize - 1) / TileSize;
                 _tileRows = (size.Height + TileSize - 1) / TileSize;
                 _tileHashes = new ulong[_tileCols * _tileRows];
+                _tileLossy = new bool[_tileCols * _tileRows];
                 Array.Fill(_tileHashes, 0UL);
             }
 
@@ -153,34 +156,84 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
                 _bitmap!.UnlockBits(data);
             }
 
-            if (changed.Count == 0)
+            if (changed.Count == 0 && !AnyPendingRefine())
                 return null;
 
             int raw = jpegQuality();
             bool lossless = raw >= 96;                 // "Máxima" = sem perda (PNG) para texto/UI nítidos
             int quality = Math.Clamp(raw, 10, 95);
-            var tiles = new List<ScreenTile>(changed.Count);
+
+            // Muita coisa mudando (arrastar janela, rolagem): prioriza fluidez com JPEG, mesmo no modo
+            // sem perda. Ao parar, o refinamento abaixo reenvia esses blocos em PNG (texto nítido).
+            int totalTiles = _tileCols * _tileRows;
+            bool highMotion = changed.Count * 5 >= totalTiles && changed.Count > 6;
+
+            var tiles = new List<ScreenTile>(changed.Count + 8);
             foreach (ScreenTile t in changed)
             {
+                int idx = (t.Y / TileSize) * _tileCols + (t.X / TileSize);
                 using Bitmap crop = _bitmap!.Clone(new Rectangle(t.X, t.Y, t.Width, t.Height), PixelFormat.Format24bppRgb);
                 byte[] encoded;
-                if (lossless)
+                if (lossless && !highMotion)
                 {
                     byte[] png = EncodePng(crop);
                     // Bloco "chapado" (texto/UI) comprime bem em PNG e fica perfeito; bloco fotográfico
                     // incha em PNG, então nesse caso usa JPEG alto (continua nítido, bem menor).
-                    encoded = png.Length <= LosslessTileCap ? png : Encode(crop, 92);
+                    if (png.Length <= LosslessTileCap) { encoded = png; _tileLossy![idx] = false; }
+                    else { encoded = Encode(crop, 92); _tileLossy![idx] = false; }
                 }
                 else
                 {
-                    encoded = Encode(crop, quality);
+                    encoded = Encode(crop, lossless ? 90 : quality);
+                    _tileLossy![idx] = lossless; // provisório no modo sem perda: refina ao parar
                 }
                 tiles.Add(t with { Jpeg = encoded });
             }
 
+            // Refinamento (modo sem perda, sem muito movimento): reenvia alguns blocos que foram
+            // mandados em JPEG durante o movimento, agora em PNG, até o texto ficar nítido ao parar.
+            if (lossless && !highMotion)
+                RefineLossless(size, tiles, budget: 8);
+
+            if (tiles.Count == 0)
+                return null;
+
             // Se o quadro ficou grande demais (ex.: tela inteira mudou em alta qualidade), ainda assim
             // envia; o limite do protocolo é 8 MiB. Em casos extremos, o Encode do TiledFrame rejeita.
             return new TiledFrame(frameIndex, size.Width, size.Height, tiles);
+        }
+    }
+
+    private bool AnyPendingRefine()
+    {
+        if (_tileLossy is null)
+            return false;
+        foreach (bool v in _tileLossy)
+            if (v) return true;
+        return false;
+    }
+
+    /// <summary>Reenvia até <paramref name="budget"/> blocos provisórios (JPEG) agora em PNG, sem perda.</summary>
+    private void RefineLossless(Size size, List<ScreenTile> tiles, int budget)
+    {
+        for (int idx = 0; idx < _tileLossy!.Length && budget > 0; idx++)
+        {
+            if (!_tileLossy[idx])
+                continue;
+            int col = idx % _tileCols;
+            int row = idx / _tileCols;
+            int tx = col * TileSize;
+            int ty = row * TileSize;
+            int tw = Math.Min(TileSize, size.Width - tx);
+            int th = Math.Min(TileSize, size.Height - ty);
+            using Bitmap crop = _bitmap!.Clone(new Rectangle(tx, ty, tw, th), PixelFormat.Format24bppRgb);
+            byte[] png = EncodePng(crop);
+            _tileLossy[idx] = false;             // ou vira PNG, ou é fotográfico e fica em JPEG mesmo
+            if (png.Length <= LosslessTileCap)
+            {
+                tiles.Add(new ScreenTile(tx, ty, tw, th, png));
+                budget--;
+            }
         }
     }
 
