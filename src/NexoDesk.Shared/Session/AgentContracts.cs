@@ -54,6 +54,16 @@ public interface ITiledFrameSource
     void Reset();
 }
 
+/// <summary>
+/// Produz quadros de vídeo H.264 (movimento fluido via codec). Preferido ao tiled quando disponível.
+/// NextH264FrameAsync respeita o ritmo de FPS internamente e devolve null se nada mudou.
+/// </summary>
+public interface IH264FrameSource
+{
+    Task<H264Frame?> NextH264FrameAsync(uint frameIndex, CancellationToken ct);
+    void Reset();
+}
+
 /// <summary>Posição do cursor na tela remota, normalizada 0..1. Visible=false quando oculto.</summary>
 public readonly record struct CursorSample(double X, double Y, bool Visible);
 

@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NexoDesk.Shared\NexoDesk.Shared.csproj" />
+    <ProjectReference Include="..\NexoDesk.Codec\NexoDesk.Codec.csproj" />
     <ProjectReference Include="..\NexoDesk.Ui\NexoDesk.Ui.csproj" />
   </ItemGroup>
 

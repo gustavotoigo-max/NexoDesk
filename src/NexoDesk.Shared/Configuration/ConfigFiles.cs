@@ -46,6 +46,9 @@ public sealed record RemoteSettings
     public int MaxFps { get; set; } = 18;
     public int JpegQuality { get; set; } = 88;
 
+    /// <summary>Modo de vídeo: "Image" (por imagem, sem perda ao parar) ou "H264" (vídeo, movimento fluido).</summary>
+    public string VideoCodec { get; set; } = "Image";
+
     /// <summary>"auto" (IP Tailscale) ou um IP. 0.0.0.0/:: nunca são aceitos.</summary>
     public string ListenAddress { get; set; } = "auto";
 

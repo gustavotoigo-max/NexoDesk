@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Codec de vídeo H.264 via Media Foundation (Windows). Usado pelo PC REMOTO (encoder) e pelo
+       ADMIN (decoder). Opcional e com fallback: se não iniciar, o app volta ao vídeo por imagem. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>NexoDesk.Codec</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Vortice.MediaFoundation" Version="3.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NexoDesk.Shared\NexoDesk.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

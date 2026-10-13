@@ -39,6 +39,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
     private readonly PairingWindow _pairing = new();
     private readonly DispatcherTimer _pairingTimer;
     private AgentHost? _host;
+    private H264ScreenSource? _h264;
     private RemoteStatus _status = RemoteStatus.Starting;
     private string? _problem;
     private string _address = "procurando…";
@@ -202,6 +203,21 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
         OnPropertyChanged(nameof(QualityMaxima));
     }
 
+    // Modo de vídeo: Imagem (sem perda ao parar) ou H.264 (movimento fluido). Trocar reinicia o serviço.
+    private bool IsH264 => string.Equals(_state.Config.Remote.VideoCodec, "H264", StringComparison.OrdinalIgnoreCase);
+    public bool VideoImage { get => !IsH264; set { if (value) SetCodec("Image"); } }
+    public bool VideoH264 { get => IsH264; set { if (value) SetCodec("H264"); } }
+
+    private void SetCodec(string codec)
+    {
+        if (string.Equals(_state.Config.Remote.VideoCodec, codec, StringComparison.OrdinalIgnoreCase))
+            return;
+        _state.Update(c => c.Remote.VideoCodec = codec);
+        OnPropertyChanged(nameof(VideoImage));
+        OnPropertyChanged(nameof(VideoH264));
+        _ = RestartAsync();
+    }
+
     public bool StartWithWindows
     {
         get => _state.Config.Remote.StartWithWindows;
@@ -269,6 +285,18 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
             return;
         }
 
+        // Modo de vídeo H.264 (opcional): se o encoder não iniciar, cai para o modo imagem (tiles).
+        _h264?.Dispose();
+        _h264 = null;
+        if (string.Equals(_state.Config.Remote.VideoCodec, "H264", StringComparison.OrdinalIgnoreCase))
+        {
+            _h264 = H264ScreenSource.TryCreate(_capture, () => _state.Config.Remote.MaxFps, () => _state.Config.Remote.JpegQuality);
+            if (_h264 is null)
+                AddLog(LogLevel.Warn, "H.264 indisponível neste computador; usando vídeo por imagem.");
+            else
+                AddLog(LogLevel.Info, "Vídeo H.264 ligado.");
+        }
+
         var consentTimeout = TimeSpan.FromSeconds(_state.Config.Remote.ConsentTimeoutSeconds);
         _host = new AgentHost(new AgentHostOptions
         {
@@ -284,7 +312,8 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
                 Features = [Features.View, Features.Control],
                 PolicyTimeout = consentTimeout + TimeSpan.FromSeconds(5),
             },
-        }, new ConsentPolicy(_dispatcher, _lock, () => _state.Config.Remote.UnattendedAccessEnabled, consentTimeout), audit, _capture, input: _input, cursor: _capture, tiles: _capture);
+        }, new ConsentPolicy(_dispatcher, _lock, () => _state.Config.Remote.UnattendedAccessEnabled, consentTimeout), audit, _capture, input: _input, cursor: _capture,
+           tiles: _h264 is null ? _capture : null, h264: _h264);
 
         _host.SessionActivated += session => _dispatcher.InvokeAsync(() =>
         {
@@ -329,6 +358,8 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
             await _host.DisposeAsync();
             _host = null;
         }
+        _h264?.Dispose();
+        _h264 = null;
         SessionAdmin = null;
     }
 
