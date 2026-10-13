@@ -39,6 +39,7 @@ public sealed class AgentSession
     private readonly IInputSink? _input;
     private readonly IFrameSource? _frames;
     private readonly ITiledFrameSource? _tiles;
+    private readonly IH264FrameSource? _h264;
     private readonly ICursorSource? _cursor;
     private readonly CancellationTokenSource _endCts = new();
     private EndReason? _localEndReason;
@@ -54,7 +55,8 @@ public sealed class AgentSession
         IPairingHandler? pairing = null,
         IFrameSource? frames = null,
         ICursorSource? cursor = null,
-        ITiledFrameSource? tiles = null)
+        ITiledFrameSource? tiles = null,
+        IH264FrameSource? h264 = null)
     {
         _channel = channel;
         _client = client;
@@ -65,6 +67,7 @@ public sealed class AgentSession
         _input = input;
         _frames = frames;
         _tiles = tiles;
+        _h264 = h264;
         _cursor = cursor;
         _pairing = pairing;
         StateMachine = new SessionStateMachine(SessionRole.Agent);
@@ -232,8 +235,9 @@ public sealed class AgentSession
     {
         bool control = Mode == SessionMode.Control;
         using var loopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-        // Envia a tela (por regiões, se disponível) e a posição do cursor em paralelo com a entrada.
-        Task framePump = _tiles is not null ? TilePumpAsync(loopCts.Token)
+        // Envia a tela (H.264 > tiles > frame único) e a posição do cursor em paralelo com a entrada.
+        Task framePump = _h264 is not null ? H264PumpAsync(loopCts.Token)
+            : _tiles is not null ? TilePumpAsync(loopCts.Token)
             : _frames is not null ? FramePumpAsync(loopCts.Token)
             : Task.CompletedTask;
         Task cursorPump = _cursor is not null ? CursorPumpAsync(loopCts.Token) : Task.CompletedTask;
@@ -273,6 +277,30 @@ public sealed class AgentSession
             catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException) { }
             _frames?.Reset();
             _tiles?.Reset();
+            _h264?.Reset();
+        }
+    }
+
+    /// <summary>Envia a tela como vídeo H.264 (movimento fluido). Null quando nada mudou.</summary>
+    private async Task H264PumpAsync(CancellationToken token)
+    {
+        uint index = 0;
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                H264Frame? frame = await _h264!.NextH264FrameAsync(index, token).ConfigureAwait(false);
+                if (frame is null)
+                    continue;
+                await _channel.SendRawAsync(MessageType.VideoH264, frame.Encode(), token).ConfigureAwait(false);
+                index++;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or ProtocolException or InvalidOperationException)
+        {
         }
     }
 

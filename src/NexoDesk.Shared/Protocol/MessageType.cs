@@ -20,16 +20,17 @@ public enum MessageType : ushort
     PairResult = 15,
     CursorUpdate = 16,
     VideoTiles = 17,
+    VideoH264 = 18,
 }
 
 public static class MessageTypeExtensions
 {
-    public static bool IsDefined(this MessageType type) => type is >= MessageType.Hello and <= MessageType.VideoTiles;
+    public static bool IsDefined(this MessageType type) => type is >= MessageType.Hello and <= MessageType.VideoH264;
 
     /// <summary>Maior payload aceito para o tipo. Comprimentos acima disso encerram a sessão.</summary>
     public static int MaxPayload(this MessageType type) => type switch
     {
-        MessageType.VideoFrame or MessageType.VideoTiles => ProtocolConstants.MaxVideoFramePayload,
+        MessageType.VideoFrame or MessageType.VideoTiles or MessageType.VideoH264 => ProtocolConstants.MaxVideoFramePayload,
         _ => ProtocolConstants.MaxControlPayload,
     };
 }

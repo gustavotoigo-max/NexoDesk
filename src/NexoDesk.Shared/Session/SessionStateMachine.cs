@@ -119,7 +119,7 @@ public sealed class SessionStateMachine
             SessionState.Authenticated => type is MessageType.HelloAck or MessageType.Error,
             SessionState.Negotiating => type is MessageType.SessionAccepted or MessageType.SessionDenied or MessageType.PairResult
                 or MessageType.Ping or MessageType.Pong or MessageType.EndSession or MessageType.Error,
-            SessionState.Streaming => type is MessageType.DisplayInfo or MessageType.VideoFrame or MessageType.VideoTiles or MessageType.CursorUpdate
+            SessionState.Streaming => type is MessageType.DisplayInfo or MessageType.VideoFrame or MessageType.VideoTiles or MessageType.VideoH264 or MessageType.CursorUpdate
                 or MessageType.Ping or MessageType.Pong or MessageType.EndSession or MessageType.Error,
             _ => false,
         },
