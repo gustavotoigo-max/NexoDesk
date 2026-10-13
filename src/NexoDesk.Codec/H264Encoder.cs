@@ -1,6 +1,6 @@
+using System.Linq;
 using System.Runtime.InteropServices;
 using NexoDesk.Shared.Messages;
-using NexoDesk.Shared.Session;
 using Vortice.MediaFoundation;
 using Vortice.Multimedia;
 using static Vortice.MediaFoundation.MediaFactory;
@@ -45,39 +45,39 @@ public sealed class H264Encoder : IDisposable
 
         try
         {
-            MFStartup(MFStartupFlags.Full).CheckError();
+            MFStartup();
 
-            var outputInfo = new TRegisterTypeInformation { GuidMajorType = MediaTypeGuids.Video, GuidSubtype = VideoFormatGuids.H264 };
-            IMFActivate[] activates = MFTEnumEx(
-                TransformCategoryGuids.VideoEncoder,
-                MFTEnumFlags.SyncMft | MFTEnumFlags.SortAndFilter,
-                null,
-                outputInfo);
-            if (activates.Length == 0)
+            // Perfil H.264 Main (77); modo progressivo; flags SyncMFT(0x1)|SortAndFilter(0x40).
+            const int ProfileMain = 77;
+            const int Progressive = 2; // MFVideoInterlace_Progressive
+            const uint EnumFlags = 0x1u | 0x40u;
+
+            var outputInfo = new RegisterTypeInfo { GuidMajorType = MediaTypeGuids.Video, GuidSubtype = VideoFormatGuids.H264 };
+            using IMFActivateCollection activates = MFTEnumEx(TransformCategoryGuids.VideoEncoder, EnumFlags, null, outputInfo);
+            IMFActivate? activate = activates.FirstOrDefault();
+            if (activate is null)
                 return null;
 
-            var mft = activates[0].ActivateObject<IMFTransform>();
-            foreach (IMFActivate a in activates)
-                a.Dispose();
+            var mft = activate.ActivateObject<IMFTransform>();
 
             // Saída (H.264) primeiro, depois entrada (NV12).
             using (IMFMediaType outType = MFCreateMediaType())
             {
-                outType.MajorType = MediaTypeGuids.Video;
+                outType.Set(MediaTypeAttributeKeys.MajorType, MediaTypeGuids.Video);
                 outType.Set(MediaTypeAttributeKeys.Subtype, VideoFormatGuids.H264);
                 outType.Set(MediaTypeAttributeKeys.AvgBitrate, bitrateBitsPerSec);
-                outType.Set(MediaTypeAttributeKeys.InterlaceMode, (int)VideoInterlaceMode.Progressive);
+                outType.Set(MediaTypeAttributeKeys.InterlaceMode, Progressive);
                 outType.Set(MediaTypeAttributeKeys.FrameSize, Pack(width, height));
                 outType.Set(MediaTypeAttributeKeys.FrameRate, Pack(fps, 1));
                 outType.Set(MediaTypeAttributeKeys.PixelAspectRatio, Pack(1, 1));
-                outType.Set(MediaTypeAttributeKeys.Mpeg2Profile, (int)eAVEncH264VProfile.Main);
+                outType.Set(MediaTypeAttributeKeys.Mpeg2Profile, ProfileMain);
                 mft.SetOutputType(0, outType, 0);
             }
             using (IMFMediaType inType = MFCreateMediaType())
             {
-                inType.MajorType = MediaTypeGuids.Video;
+                inType.Set(MediaTypeAttributeKeys.MajorType, MediaTypeGuids.Video);
                 inType.Set(MediaTypeAttributeKeys.Subtype, VideoFormatGuids.NV12);
-                inType.Set(MediaTypeAttributeKeys.InterlaceMode, (int)VideoInterlaceMode.Progressive);
+                inType.Set(MediaTypeAttributeKeys.InterlaceMode, Progressive);
                 inType.Set(MediaTypeAttributeKeys.FrameSize, Pack(width, height));
                 inType.Set(MediaTypeAttributeKeys.FrameRate, Pack(fps, 1));
                 inType.Set(MediaTypeAttributeKeys.PixelAspectRatio, Pack(1, 1));
@@ -85,8 +85,8 @@ public sealed class H264Encoder : IDisposable
             }
 
             var enc = new H264Encoder(mft, width, height, fps);
-            mft.ProcessMessage(TMessageType.MessageNotifyBeginStreaming, IntPtr.Zero);
-            mft.ProcessMessage(TMessageType.MessageNotifyStartOfStream, IntPtr.Zero);
+            mft.ProcessMessage(TMessageType.MessageNotifyBeginStreaming, UIntPtr.Zero);
+            mft.ProcessMessage(TMessageType.MessageNotifyStartOfStream, UIntPtr.Zero);
             enc._started = true;
             return enc;
         }
@@ -102,7 +102,7 @@ public sealed class H264Encoder : IDisposable
     /// <summary>Pede que o próximo quadro seja um keyframe (ex.: novo ADMIN conectando).</summary>
     public void RequestKeyFrame()
     {
-        try { _mft.ProcessMessage(TMessageType.MessageCommandDrain, IntPtr.Zero); } catch (Exception) { }
+        try { _mft.ProcessMessage(TMessageType.MessageCommandDrain, UIntPtr.Zero); } catch (Exception) { }
     }
 
     /// <summary>
@@ -198,7 +198,7 @@ public sealed class H264Encoder : IDisposable
         if (_disposed)
             return;
         _disposed = true;
-        try { _mft.ProcessMessage(TMessageType.MessageNotifyEndOfStream, IntPtr.Zero); } catch (Exception) { }
+        try { _mft.ProcessMessage(TMessageType.MessageNotifyEndOfStream, UIntPtr.Zero); } catch (Exception) { }
         _mft.Dispose();
     }
 }
