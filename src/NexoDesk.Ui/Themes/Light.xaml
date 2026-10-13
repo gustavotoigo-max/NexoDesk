@@ -1,0 +1,44 @@
+<!-- Nexotool UI — tema claro. As mesmas chaves existem em Dark.xaml; o ThemeManager troca o dicionário inteiro. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <SolidColorBrush x:Key="Nx.Blue" Color="#2563EB" />
+    <SolidColorBrush x:Key="Nx.Bg" Color="#F4F6FA" />
+    <SolidColorBrush x:Key="Nx.Surface" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="Nx.SurfaceAlt" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="Nx.Border" Color="#E2E8F0" />
+    <SolidColorBrush x:Key="Nx.BorderStrong" Color="#CBD5E1" />
+    <SolidColorBrush x:Key="Nx.BorderHover" Color="#94A3B8" />
+    <SolidColorBrush x:Key="Nx.Text" Color="#0F172A" />
+    <SolidColorBrush x:Key="Nx.TextMuted" Color="#475569" />
+    <SolidColorBrush x:Key="Nx.TextSubtle" Color="#64748B" />
+    <SolidColorBrush x:Key="Nx.Disabled" Color="#94A3B8" />
+    <SolidColorBrush x:Key="Nx.DisabledFill" Color="#E2E8F0" />
+    <SolidColorBrush x:Key="Nx.BlueSoft" Color="#EFF6FF" />
+    <SolidColorBrush x:Key="Nx.BlueSelection" Color="#DBEAFE" />
+    <SolidColorBrush x:Key="Nx.Scroll" Color="#94A3B8" />
+
+    <SolidColorBrush x:Key="Nx.Success" Color="#16A34A" />
+    <SolidColorBrush x:Key="Nx.SuccessSoft" Color="#DCFCE7" />
+    <SolidColorBrush x:Key="Nx.SuccessText" Color="#166534" />
+    <SolidColorBrush x:Key="Nx.SuccessBorder" Color="#BBF7D0" />
+
+    <SolidColorBrush x:Key="Nx.Warning" Color="#D97706" />
+    <SolidColorBrush x:Key="Nx.WarningSoft" Color="#FEF3C7" />
+    <SolidColorBrush x:Key="Nx.WarningText" Color="#92400E" />
+    <SolidColorBrush x:Key="Nx.WarningBorder" Color="#FDE68A" />
+
+    <SolidColorBrush x:Key="Nx.Danger" Color="#DC2626" />
+    <SolidColorBrush x:Key="Nx.DangerHover" Color="#B91C1C" />
+    <SolidColorBrush x:Key="Nx.DangerSoft" Color="#FEE2E2" />
+    <SolidColorBrush x:Key="Nx.DangerText" Color="#991B1B" />
+    <SolidColorBrush x:Key="Nx.DangerBorder" Color="#FCA5A5" />
+
+    <SolidColorBrush x:Key="Nx.Info" Color="#2563EB" />
+    <SolidColorBrush x:Key="Nx.InfoSoft" Color="#EFF6FF" />
+    <SolidColorBrush x:Key="Nx.InfoText" Color="#1E40AF" />
+    <SolidColorBrush x:Key="Nx.InfoBorder" Color="#DBEAFE" />
+
+    <Color x:Key="Nx.Color.Shadow">#290B1733</Color>
+
+</ResourceDictionary>

@@ -1,0 +1,23 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+*.rsuser
+TestResults/
+artifacts/
+publish/
+
+## Segredos e certificados — NUNCA versionar
+*.pfx
+*.p12
+*.key
+*.pem
+certs/
+!scripts/*.ps1
+
+## Configuração local
+**/machines.local.json
+**/agent.local.json

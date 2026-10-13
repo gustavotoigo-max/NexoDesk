@@ -1,0 +1,53 @@
+<Window x:Class="NexoDesk.Ui.Controls.NxDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        SizeToContent="Height"
+        Width="492"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="{DynamicResource Nx.Font}"
+        FontSize="13"
+        Foreground="{DynamicResource Nx.Text}"
+        UseLayoutRounding="True">
+
+    <!-- Margem para a sombra; o cartão em si tem 460 px como no guia -->
+    <Border Margin="16" CornerRadius="10" Background="{DynamicResource Nx.Surface}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="8" Direction="270" Opacity="0.22" Color="#0B1733" />
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Margin="24,22,24,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="40" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="IconCircle" Width="40" Height="40" CornerRadius="20" VerticalAlignment="Top" Background="{DynamicResource Nx.BlueSoft}">
+                    <TextBlock x:Name="IconGlyph" FontFamily="{DynamicResource Nx.Icons}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Foreground="{DynamicResource Nx.Blue}" Text="&#xE946;" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                    <TextBlock x:Name="TitleText" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="BodyText" Margin="0,6,0,0" FontSize="13" Foreground="{DynamicResource Nx.TextMuted}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="CountdownText" Margin="0,10,0,0" FontSize="11.5" Foreground="{DynamicResource Nx.TextSubtle}" Visibility="Collapsed" />
+                </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="1" Background="{DynamicResource Nx.SurfaceAlt}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="0,1,0,0"
+                    Padding="24,14" CornerRadius="0,0,10,10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="SecondaryButton" Style="{DynamicResource Nx.Button}" Margin="0,0,10,0" IsCancel="True" Click="OnSecondary" />
+                    <Button x:Name="PrimaryButton" Style="{DynamicResource Nx.Button.Primary}" IsDefault="True" Click="OnPrimary" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

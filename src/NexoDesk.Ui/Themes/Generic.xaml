@@ -1,0 +1,193 @@
+<!-- Modelos padrão dos controles da biblioteca (NxWindow, NxBadge, NxPill). -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:NexoDesk.Ui.Controls">
+
+    <!-- ============================== NxWindow ============================== -->
+    <Style TargetType="{x:Type controls:NxWindow}">
+        <Setter Property="Background" Value="{DynamicResource Nx.Bg}" />
+        <Setter Property="Foreground" Value="{DynamicResource Nx.Text}" />
+        <Setter Property="FontFamily" Value="{DynamicResource Nx.Font}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="UseLayoutRounding" Value="True" />
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+        <Setter Property="WindowStyle" Value="SingleBorderWindow" />
+        <Setter Property="WindowChrome.WindowChrome">
+            <Setter.Value>
+                <WindowChrome CaptionHeight="36"
+                              ResizeBorderThickness="6"
+                              GlassFrameThickness="0"
+                              CornerRadius="0"
+                              UseAeroCaptionButtons="False" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:NxWindow}">
+                    <Border x:Name="PART_Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{DynamicResource Nx.Navy3}"
+                            BorderThickness="1">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="36" />
+                                <RowDefinition Height="2" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Barra de título -->
+                            <Grid Grid.Row="0" Background="{DynamicResource Nx.Navy}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Logotipo: quadrado em degradê com um monitor -->
+                                <Border Grid.Column="0" Width="20" Height="20" CornerRadius="5" Margin="14,0,10,0"
+                                        Background="{DynamicResource Nx.AccentGradient}" VerticalAlignment="Center">
+                                    <Path Data="M 4.5,5.5 H 15.5 V 12.5 H 4.5 Z M 8,15 H 12 M 10,12.5 V 15"
+                                          Stroke="White" StrokeThickness="1.4" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                </Border>
+
+                                <TextBlock Grid.Column="1" Text="{TemplateBinding Title}" VerticalAlignment="Center"
+                                           FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Nx.OnNavy}" />
+
+                                <TextBlock x:Name="TaglineText" Grid.Column="2" VerticalAlignment="Center" Margin="8,0,12,0"
+                                           FontSize="12" Foreground="{DynamicResource Nx.OnNavyMuted}" TextTrimming="CharacterEllipsis">
+                                    <Run Text="·" /><Run Text=" " /><Run Text="{Binding Tagline, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" />
+                                </TextBlock>
+
+                                <ContentPresenter Grid.Column="3" Content="{TemplateBinding TitleBarContent}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                  WindowChrome.IsHitTestVisibleInChrome="True" />
+
+                                <StackPanel Grid.Column="4" Orientation="Horizontal">
+                                    <Button x:Name="MinButton" Style="{DynamicResource Nx.CaptionButton}" Content="&#xE921;" ToolTip="Minimizar"
+                                            Command="{x:Static SystemCommands.MinimizeWindowCommand}" WindowChrome.IsHitTestVisibleInChrome="True" />
+                                    <Button x:Name="MaxButton" Style="{DynamicResource Nx.CaptionButton}" Content="&#xE922;" ToolTip="Maximizar"
+                                            Command="{x:Static SystemCommands.MaximizeWindowCommand}" WindowChrome.IsHitTestVisibleInChrome="True" />
+                                    <Button x:Name="RestoreButton" Style="{DynamicResource Nx.CaptionButton}" Content="&#xE923;" ToolTip="Restaurar"
+                                            Command="{x:Static SystemCommands.RestoreWindowCommand}" WindowChrome.IsHitTestVisibleInChrome="True" Visibility="Collapsed" />
+                                    <Button Style="{DynamicResource Nx.CaptionButton.Close}" Content="&#xE8BB;" ToolTip="Fechar"
+                                            Command="{x:Static SystemCommands.CloseWindowCommand}" WindowChrome.IsHitTestVisibleInChrome="True" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Linha em degradê -->
+                            <Rectangle Grid.Row="1" Fill="{DynamicResource Nx.AccentGradient}" />
+
+                            <!-- Conteúdo -->
+                            <AdornerDecorator Grid.Row="2">
+                                <ContentPresenter />
+                            </AdornerDecorator>
+
+                            <!-- Rodapé -->
+                            <Border x:Name="Footer" Grid.Row="3" Height="34" Background="{DynamicResource Nx.Navy}" Padding="24,0">
+                                <Grid TextElement.Foreground="{DynamicResource Nx.OnNavyMuted}" TextElement.FontSize="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter Content="{TemplateBinding FooterContent}" VerticalAlignment="Center" />
+                                    <ContentPresenter Grid.Column="1" Content="{TemplateBinding FooterRightContent}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="WindowState" Value="Maximized">
+                            <Setter TargetName="MaxButton" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="RestoreButton" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="Tagline" Value="{x:Null}">
+                            <Setter TargetName="TaglineText" Property="Visibility" Value="Hidden" />
+                        </Trigger>
+                        <Trigger Property="ShowFooter" Value="False">
+                            <Setter TargetName="Footer" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="CanMinimize" Value="False">
+                            <Setter TargetName="MinButton" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="CanMaximize" Value="False">
+                            <Setter TargetName="MaxButton" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="RestoreButton" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="IsActive" Value="False">
+                            <Setter TargetName="TaglineText" Property="Opacity" Value="0.7" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============================== NxBadge ============================== -->
+    <Style TargetType="{x:Type controls:NxBadge}">
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Background" Value="{DynamicResource Nx.SurfaceAlt}" />
+        <Setter Property="Foreground" Value="{DynamicResource Nx.TextMuted}" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:NxBadge}">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="8,2">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="Dot" Width="7" Height="7" Margin="0,0,6,0" Fill="{TemplateBinding Foreground}" VerticalAlignment="Center" Visibility="Collapsed" />
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="ShowDot" Value="True">
+                            <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Kind" Value="Success">
+                <Setter Property="Background" Value="{DynamicResource Nx.SuccessSoft}" />
+                <Setter Property="Foreground" Value="{DynamicResource Nx.SuccessText}" />
+            </Trigger>
+            <Trigger Property="Kind" Value="Warning">
+                <Setter Property="Background" Value="{DynamicResource Nx.WarningSoft}" />
+                <Setter Property="Foreground" Value="{DynamicResource Nx.WarningText}" />
+            </Trigger>
+            <Trigger Property="Kind" Value="Danger">
+                <Setter Property="Background" Value="{DynamicResource Nx.DangerSoft}" />
+                <Setter Property="Foreground" Value="{DynamicResource Nx.DangerText}" />
+            </Trigger>
+            <Trigger Property="Kind" Value="Info">
+                <Setter Property="Background" Value="{DynamicResource Nx.InfoSoft}" />
+                <Setter Property="Foreground" Value="{DynamicResource Nx.InfoText}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ============================== NxPill ============================== -->
+    <Style TargetType="{x:Type controls:NxPill}">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Background" Value="{DynamicResource Nx.BlueSoft}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nx.BlueSelection}" />
+        <Setter Property="Foreground" Value="{DynamicResource Nx.InfoText}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:NxPill}">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="12,4">
+                        <ContentPresenter VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

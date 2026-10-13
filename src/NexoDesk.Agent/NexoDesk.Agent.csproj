@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- Somente para o ícone da área de notificação (NotifyIcon). -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>NexoDesk.Agent</RootNamespace>
+    <AssemblyName>NexoDesk.Agent</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyTitle>NexoDesk Agent</AssemblyTitle>
+  </PropertyGroup>
+
+  <!-- WPF e Windows Forms juntos: evita ambiguidades (Application, MessageBox, Button…). Tipos WinForms vão qualificados. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NexoDesk.Shared\NexoDesk.Shared.csproj" />
+    <ProjectReference Include="..\NexoDesk.Ui\NexoDesk.Ui.csproj" />
+  </ItemGroup>
+
+</Project>

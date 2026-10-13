@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <Company>Nexotool</Company>
+    <Product>NexoDesk</Product>
+    <Version>0.2.0</Version>
+    <Copyright>Nexotool</Copyright>
+  </PropertyGroup>
+</Project>

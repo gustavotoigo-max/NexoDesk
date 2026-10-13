@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Nexotool UI para WPF: tokens claro/escuro, estilos de controles e a janela padrão (NxWindow). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>NexoDesk.Ui</RootNamespace>
+  </PropertyGroup>
+
+</Project>
