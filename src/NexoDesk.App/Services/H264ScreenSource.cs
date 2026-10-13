@@ -18,7 +18,6 @@ public sealed class H264ScreenSource : IH264FrameSource, IDisposable
     private readonly Func<int> _maxFps;
     private readonly H264Encoder _encoder;
     private readonly int _keyframeEvery;
-    private ulong _lastHash;
     private int _sinceKey;
     private long _nextTicks;
     private bool _disposed;
@@ -71,39 +70,21 @@ public sealed class H264ScreenSource : IH264FrameSource, IDisposable
         if (raw is null || raw.Width != _encoder.Width || raw.Height != _encoder.Height)
             return null; // mudou a resolução (ou tela de bloqueio): nada neste quadro.
 
-        bool forceKey = _sinceKey >= _keyframeEvery;
-        ulong hash = Hash(raw.Bgra);
-        if (hash == _lastHash && !forceKey)
-            return null; // nada mudou e não é hora de keyframe.
-        _lastHash = hash;
-
-        if (forceKey)
+        // O encoder do Media Foundation precisa de alimentação contínua para emitir quadros (tem
+        // latência de 1-2 frames). Por isso alimentamos TODO quadro — em tela parada ele gera
+        // P-frames minúsculos, então a banda continua baixa. Keyframe periódico para quem entra no meio.
+        if (_sinceKey >= _keyframeEvery)
         {
             _encoder.RequestKeyFrame();
             _sinceKey = 0;
         }
         _sinceKey++;
 
-        H264Frame? frame = _encoder.Encode(frameIndex, raw.Bgra, raw.Stride);
-        return frame;
-    }
-
-    /// <summary>FNV-1a sobre todos os canais de cor; pega mudanças de 1 px (cursor piscando).</summary>
-    private static ulong Hash(byte[] bgra)
-    {
-        ulong hash = 1469598103934665603UL;
-        for (int i = 0; i < bgra.Length; i += 4)
-        {
-            hash = (hash ^ bgra[i]) * 1099511628211UL;
-            hash = (hash ^ bgra[i + 1]) * 1099511628211UL;
-            hash = (hash ^ bgra[i + 2]) * 1099511628211UL;
-        }
-        return hash;
+        return _encoder.Encode(frameIndex, raw.Bgra, raw.Stride);
     }
 
     public void Reset()
     {
-        _lastHash = 0;
         _sinceKey = _keyframeEvery; // próximo quadro é keyframe
         _nextTicks = 0;
     }

@@ -22,7 +22,6 @@ public sealed class H264Decoder : IDisposable
     private int _height;
     private byte[] _nv12 = [];
     private byte[] _bgra = [];
-    private bool _outputReady;
     private long _time100ns;
     private bool _disposed;
 
@@ -31,6 +30,8 @@ public sealed class H264Decoder : IDisposable
         _mft = mft;
         _width = width;
         _height = height;
+        _nv12 = new byte[YuvConvert.Nv12Size(width, height)];
+        _bgra = new byte[width * 4 * height];
     }
 
     public int Width => _width;
@@ -85,21 +86,22 @@ public sealed class H264Decoder : IDisposable
         if (_disposed)
             return false;
 
-        FeedInput(frame.Bitstream.Span);
+        try { FeedInput(frame.Bitstream.Span); }
+        catch (Exception) { return false; }
 
-        // Esvazia a saída disponível (pode trocar de formato na primeira vez).
-        while (true)
+        // Esvazia a saída disponível. O decoder sinaliza a resolução real via STREAM_CHANGE.
+        for (int guard = 0; guard < 8; guard++)
         {
-            if (!EnsureOutput())
-                return false;
-
             IMFSample outSample = MFCreateSample();
-            IMFMediaBuffer outBuffer = MFCreateMemoryBuffer(_nv12.Length);
+            IMFMediaBuffer outBuffer = MFCreateMemoryBuffer(Math.Max(_nv12.Length, 1));
             outSample.AddBuffer(outBuffer);
             outBuffer.Dispose();
 
             var buffer0 = new OutputDataBuffer { StreamID = 0, Sample = outSample };
-            Result res = _mft.ProcessOutput(0, 1, ref buffer0, out _);
+            Result res;
+            try { res = _mft.ProcessOutput(0, 1, ref buffer0, out _); }
+            catch (Exception) { outSample.Dispose(); return false; }
+
             if (res.Success)
             {
                 try
@@ -111,21 +113,20 @@ public sealed class H264Decoder : IDisposable
                     height = _height;
                     return true;
                 }
-                finally
-                {
-                    outSample.Dispose();
-                }
+                catch (Exception) { return false; }
+                finally { outSample.Dispose(); }
             }
 
             outSample.Dispose();
             if (res.Code == MF_E_TRANSFORM_STREAM_CHANGE)
             {
                 RenegotiateOutput();
-                continue;
+                continue; // tenta de novo com a resolução/buffers atualizados.
             }
             // NEED_MORE_INPUT ou outro: sem imagem neste quadro.
             return false;
         }
+        return false;
     }
 
     private void FeedInput(ReadOnlySpan<byte> h264)
@@ -143,15 +144,6 @@ public sealed class H264Decoder : IDisposable
         try { _mft.ProcessInput(0, sample, 0); }
         catch (Exception) { /* fila cheia: a saída será esvaziada no laço */ }
         finally { sample.Dispose(); }
-    }
-
-    private bool EnsureOutput()
-    {
-        if (_outputReady)
-            return true;
-        // Antes do primeiro STREAM_CHANGE o decoder ainda não sabe a resolução real (lê do SPS).
-        RenegotiateOutput();
-        return _outputReady;
     }
 
     private void RenegotiateOutput()
@@ -173,7 +165,6 @@ public sealed class H264Decoder : IDisposable
                     _mft.SetOutputType(0, type, 0);
                     _nv12 = new byte[YuvConvert.Nv12Size(_width, _height)];
                     _bgra = new byte[_width * 4 * _height];
-                    _outputReady = true;
                     return;
                 }
             }

@@ -96,10 +96,13 @@ public sealed class H264Encoder : IDisposable
     public int Width => _width;
     public int Height => _height;
 
-    /// <summary>Pede que o próximo quadro seja um keyframe (ex.: novo ADMIN conectando).</summary>
+    /// <summary>
+    /// Reservado para forçar keyframe (via ICodecAPI) numa versão futura. Por ora é no-op: o encoder
+    /// já emite um IDR no início e keyframes periódicos pelo GOP padrão. (NUNCA usar DRAIN aqui — isso
+    /// encerra o fluxo e trava o encoder.)
+    /// </summary>
     public void RequestKeyFrame()
     {
-        try { _mft.ProcessMessage(TMessageType.MessageCommandDrain, UIntPtr.Zero); } catch (Exception) { }
     }
 
     /// <summary>
@@ -111,20 +114,28 @@ public sealed class H264Encoder : IDisposable
         if (_disposed || !_started)
             return null;
 
-        YuvConvert.BgraToNv12(bgra, stride, _width, _height, _nv12);
-
-        IMFSample sample = CreateSample(_nv12, _time100ns, _frameDuration100ns);
         try
         {
-            _mft.ProcessInput(0, sample, 0);
-        }
-        finally
-        {
-            sample.Dispose();
-        }
-        _time100ns += _frameDuration100ns;
+            YuvConvert.BgraToNv12(bgra, stride, _width, _height, _nv12);
 
-        return DrainOutput(frameIndex);
+            IMFSample sample = CreateSample(_nv12, _time100ns, _frameDuration100ns);
+            try
+            {
+                _mft.ProcessInput(0, sample, 0);
+            }
+            finally
+            {
+                sample.Dispose();
+            }
+            _time100ns += _frameDuration100ns;
+
+            return DrainOutput(frameIndex);
+        }
+        catch (Exception)
+        {
+            // Erro transitório do Media Foundation: pula este quadro em vez de derrubar a transmissão.
+            return null;
+        }
     }
 
     private H264Frame? DrainOutput(uint frameIndex)
