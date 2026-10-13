@@ -41,7 +41,17 @@
         <!-- Vídeo remoto: ajustado à área útil, sem distorção -->
         <Image x:Name="RemoteImage" Source="{Binding Frame}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True" Focusable="True" />
 
-        <!-- Conectado, ainda sem vídeo (a captura chega no M3) -->
+        <!-- Aviso: conectado em "Só ver" (mouse/teclado não comandam) -->
+        <Border VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,12,0,0" CornerRadius="10" Padding="16,8"
+                Background="{DynamicResource Nx.WarningSoft}" BorderBrush="{DynamicResource Nx.WarningBorder}" BorderThickness="1">
+            <Border.Visibility>
+                <Binding Path="ViewOnly" Converter="{StaticResource BoolToVisibility}" />
+            </Border.Visibility>
+            <TextBlock Foreground="{DynamicResource Nx.WarningText}" FontSize="12.5" TextWrapping="Wrap"
+                       Text="Você está só vendo. Para usar mouse e teclado, desconecte e conecte de novo no modo Controlar." />
+        </Border>
+
+        <!-- Conectado, ainda sem vídeo -->
         <Border HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Padding="28,26">
             <Border.Style>
                 <Style TargetType="Border" BasedOn="{StaticResource Nx.Card}">

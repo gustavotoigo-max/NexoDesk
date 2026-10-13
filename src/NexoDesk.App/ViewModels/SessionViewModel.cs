@@ -121,8 +121,11 @@ public sealed class SessionViewModel : ObservableObject
 
     public bool HasFrame => Frame is not null;
 
-    /// <summary>Conectado e ainda sem imagem (até o M3, é o estado normal).</summary>
+    /// <summary>Conectado e ainda sem imagem.</summary>
     public bool ShowWaiting => !HasFrame && !IsEnded;
+
+    /// <summary>Conectado em "Só ver": mostra um aviso de que o mouse/teclado não comandam.</summary>
+    public bool ViewOnly => !IsEnded && !_session.CanControl;
 
     public string LatencyText
     {
@@ -152,6 +155,8 @@ public sealed class SessionViewModel : ObservableObject
                 OnPropertyChanged(nameof(StateText));
                 OnPropertyChanged(nameof(StateKind));
                 OnPropertyChanged(nameof(ShowWaiting));
+                OnPropertyChanged(nameof(ViewOnly));
+                OnPropertyChanged(nameof(CanControl));
                 CommandManager.InvalidateRequerySuggested();
             }
         }
