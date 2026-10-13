@@ -2,21 +2,29 @@ using System.Runtime.InteropServices;
 using NexoDesk.Shared.Messages;
 using NexoDesk.Shared.Session;
 
-namespace NexoDesk.App.Services;
+namespace NexoDesk.Desktop;
 
 /// <summary>
 /// Aplica mouse e teclado no PC REMOTO com SendInput. O mouse usa coordenadas normalizadas (0..1)
 /// convertidas para a tela primária; o teclado usa scan codes para independer do layout.
 /// Mantém o controle de botões/teclas pressionados para soltar tudo ao fim da sessão (ReleaseAll).
 /// </summary>
-public sealed class SendInputSink : IInputSink
+public sealed class SendInputSink(bool followInputDesktop = false) : IInputSink
 {
     private readonly object _gate = new();
     private readonly HashSet<ushort> _keysDown = [];
     private readonly HashSet<PointerButton> _buttonsDown = [];
 
+    /// <summary>Como SYSTEM, prende a thread ao desktop ativo para injetar na tela bloqueada e em apps de administrador.</summary>
+    private void FollowDesktop()
+    {
+        if (followInputDesktop)
+            InputDesktop.EnsureCurrentThreadOnInputDesktop();
+    }
+
     public void Apply(PointerEventMessage pointer)
     {
+        FollowDesktop();
         int screenW = Math.Max(GetSystemMetrics(0), 1);
         int screenH = Math.Max(GetSystemMetrics(1), 1);
         // SendInput absoluto usa 0..65535 sobre a tela primária.
@@ -54,6 +62,7 @@ public sealed class SendInputSink : IInputSink
 
     public void Apply(KeyEventMessage key)
     {
+        FollowDesktop();
         bool up = key.Action == KeyAction.Up;
         lock (_gate)
         {

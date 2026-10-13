@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Captura de tela e injeção de entrada, sem WPF: usado pelo App (fallback na sessão do
+       usuário) e pelo agente SYSTEM (serviço). Segue o desktop de entrada (Default/Winlogon). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- Traz o framework do Windows Desktop com System.Drawing (GDI+): Bitmap, Graphics,
+         ImageCodecInfo. Não rodamos interface aqui; é só para a captura de tela. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>false</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>NexoDesk.Desktop</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- A biblioteca não usa WinForms; evita que o using implícito esconda ambiguidades. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NexoDesk.Shared\NexoDesk.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
