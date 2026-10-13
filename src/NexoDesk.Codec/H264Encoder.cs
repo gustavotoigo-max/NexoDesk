@@ -57,6 +57,14 @@ public sealed class H264Encoder : IDisposable
                 return null;
             var mft = new IMFTransform(ptr);
 
+            // Baixa latência: desliga B-frames e reduz o buffer — menos atraso (chave para resposta).
+            try
+            {
+                using IMFAttributes attrs = mft.GetAttributes();
+                attrs.SetUInt32(MF_LOW_LATENCY, 1);
+            }
+            catch (Exception) { }
+
             // Saída (H.264) primeiro, depois entrada (NV12).
             using (IMFMediaType outType = MFCreateMediaType())
             {
@@ -201,6 +209,7 @@ public sealed class H264Encoder : IDisposable
     private const int CLSCTX_INPROC_SERVER = 1;
     private static readonly Guid ClsidH264Encoder = new("6CA50344-051A-4DED-9779-A43305165E35");
     private static readonly Guid IidImfTransform = new("BF94C121-5B05-4E6F-8000-BA598961414D");
+    private static readonly Guid MF_LOW_LATENCY = new("9C27891A-ED7A-40E1-88E8-B22727A024EE");
 
     [DllImport("ole32.dll")]
     private static extern int CoCreateInstance(in Guid rclsid, IntPtr pUnkOuter, int dwClsContext, in Guid riid, out IntPtr ppv);

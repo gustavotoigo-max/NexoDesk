@@ -38,9 +38,9 @@ public sealed class H264ScreenSource : IH264FrameSource, IDisposable
             return null;
 
         int fps = Math.Clamp(maxFps(), 5, 30);
-        // Taxa de bits-alvo conforme a qualidade escolhida (a tela parada gasta bem menos).
+        // Taxa de bits-alvo conforme a qualidade escolhida (a tela parada gasta bem menos com baixa latência).
         int q = quality();
-        int bitrate = q >= 96 ? 16_000_000 : q >= 90 ? 10_000_000 : 6_000_000;
+        int bitrate = q >= 96 ? 25_000_000 : q >= 90 ? 15_000_000 : 8_000_000;
         H264Encoder? enc = H264Encoder.TryCreate(first.Width, first.Height, fps, bitrate);
         if (enc is null)
             return null;
