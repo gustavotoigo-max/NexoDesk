@@ -164,10 +164,10 @@ public sealed class H264Decoder : IDisposable
             catch (Exception) { return; }
             try
             {
-                Guid subtype = type.Get(MediaTypeAttributeKeys.Subtype);
+                Guid subtype = type.GetGuid(MediaTypeAttributeKeys.Subtype);
                 if (subtype == VideoFormatGuids.NV12)
                 {
-                    long size = type.Get(MediaTypeAttributeKeys.FrameSize);
+                    ulong size = type.GetUInt64(MediaTypeAttributeKeys.FrameSize);
                     _width = (int)(size >> 32);
                     _height = (int)(size & 0xFFFFFFFF);
                     _mft.SetOutputType(0, type, 0);
