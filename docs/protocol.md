@@ -1,6 +1,6 @@
 # Protocolo NexoDesk v1
 
-Fonte de verdade do contrato de rede entre **NexoDesk Admin** e **NexoDesk Agent**. Implementação: `src/NexoDesk.Shared/Protocol` e `src/NexoDesk.Shared/Messages`. Qualquer mudança aqui exige nova versão do protocolo.
+Fonte de verdade do contrato de rede entre o **ADMIN** e o **PC REMOTO** (internamente: lado Admin e lado Agent). Implementação: `src/NexoDesk.Shared/Protocol` e `src/NexoDesk.Shared/Messages`. Qualquer mudança aqui exige nova versão do protocolo.
 
 ## Transporte
 
@@ -46,6 +46,8 @@ Regras de leitura (todas testadas em `MessageFramerTests`):
 | 11 | `Pong` | ambos | `echoTimestamp` (devolve o recebido) |
 | 12 | `EndSession` | ambos | `reason` |
 | 13 | `Error` | ambos | `code`, `message` |
+| 14 | `PairRequest` | Admin → Agent | `clientName`, `proof` (64 hex) |
+| 15 | `PairResult` | Agent → Admin | `accepted`, `serverId`, `displayName`, `proof`, `message` |
 
 JSON: nomes em camelCase, enums como texto (`"View"`), campos obrigatórios, `null` rejeitado em campos não anuláveis, campos desconhecidos ignorados. Cada mensagem é validada depois de desserializada (faixas, tamanho de texto, caracteres de controle). Ver `MessageTests`.
 
@@ -73,7 +75,7 @@ Mensagens aceitas por estado (o resto é `UnexpectedMessage` e encerra a sessão
 | Estado | Agent recebe | Admin recebe |
 |---|---|---|
 | Authenticated | `Hello` | `HelloAck`, `Error` |
-| Negotiating | `StartSession`, `Ping`, `EndSession` | `SessionAccepted`, `SessionDenied`, `Ping`, `Pong`, `EndSession`, `Error` |
+| Negotiating | `StartSession`, `PairRequest`, `Ping`, `EndSession` | `SessionAccepted`, `SessionDenied`, `PairResult`, `Ping`, `Pong`, `EndSession`, `Error` |
 | Streaming | `PointerEvent`, `KeyEvent`, `Ping`, `Pong`, `EndSession` | `DisplayInfo`, `VideoFrame`, `Ping`, `Pong`, `EndSession`, `Error` |
 
 ## Fluxo de sessão
@@ -85,6 +87,21 @@ Mensagens aceitas por estado (o resto é `UnexpectedMessage` e encerra a sessão
 5. Agent responde `SessionAccepted` + `DisplayInfo` (ou `SessionDenied` com motivo) e passa a `Streaming`.
 6. Admin envia `Ping` a cada 2 s; latência = ida e volta do `Pong`.
 7. Fim: `EndSession` de qualquer lado, `Error`, tempo de inatividade (Agent 30 s, Admin 15 s) ou queda de rede.
+
+## Pareamento
+
+Feito uma vez por par ADMIN ↔ PC REMOTO, para que cada lado fixe a identidade (certificado) do outro.
+
+1. No PC REMOTO, o usuário clica em **Gerar código**: abre-se uma janela de pareamento de 10 minutos com um código de 12 caracteres (alfabeto de 32 símbolos sem I, O, 0, 1 — 60 bits). Uso único; fecha após 3 provas erradas.
+2. Enquanto a janela está aberta, o PC REMOTO aceita no TLS um certificado de cliente desconhecido (ainda verificando validade, uso e chave). Sem janela aberta, desconhecidos são recusados no TLS.
+3. O ADMIN conecta aceitando o certificado ainda desconhecido do PC REMOTO, faz `Hello`/`HelloAck` e envia `PairRequest` com
+   `proof = HMAC-SHA256(K, "admin|" + fpAdmin + "|" + fpRemoto)`, onde
+   `K = PBKDF2-SHA256(código, sal = SHA-256("NXDK-PAIR-v1|" + fpAdmin + "|" + fpRemoto), 200 000 iterações, 32 bytes)`
+   e `fp` são as impressões SHA-256 dos certificados **vistos no TLS** por cada lado.
+4. O PC REMOTO confere; se bater, grava o ADMIN e responde `PairResult` com a prova dele (`"remote|..."`). Se não bater, `accepted=false`.
+5. O ADMIN confere a prova do PC REMOTO e só então grava a impressão dele.
+
+Um intermediário apresentaria certificados diferentes; as impressões usadas nas provas não bateriam e o pareamento falharia nos dois lados. Um ADMIN não pareado que tente `StartSession` recebe `SessionDenied(NotAuthorized)`.
 
 ## Prazos padrão
 

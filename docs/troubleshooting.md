@@ -1,24 +1,38 @@
 # Solução de problemas
 
-| Sintoma | Causa provável | O que fazer |
+## No PC REMOTO
+
+| Mensagem ou sintoma | O que fazer |
+|---|---|
+| **Nenhum IP Tailscale encontrado** / **Tailscale não está instalado** | Instale e abra o Tailscale, entre na rede da empresa e clique em **Tentar de novo** |
+| **A porta 47115 está em uso** | Feche outra cópia do NexoDesk (ícone perto do relógio) e clique em **Tentar de novo** |
+| O ADMIN diz que não conecta, mas aqui está *Pronto para o ADMIN* | Confira se o ADMIN usa o **Endereço deste PC REMOTO** exatamente como aparece aqui |
+| O código de pareamento sumiu | Ele vale 10 minutos, uma vez, e é cancelado após 3 erros. Gere outro |
+| Aparece *A identidade deste computador foi recriada* | O certificado do Windows sumiu (outra conta ou Windows reinstalado). Remova este PC no ADMIN e pareie de novo |
+| Quero que o NexoDesk não abra com o Windows | **Opções → Abrir o NexoDesk junto com o Windows** (sem ele, o ADMIN só acessa depois que alguém abrir o programa) |
+
+## No ADMIN
+
+| Mensagem | Causa | O que fazer |
 |---|---|---|
-| Admin: **Indisponível — porta fechada** | Agent não está aberto no PC | Abra o NexoDesk Agent (ícone na área de notificação) |
-| Admin: **Indisponível — sem resposta em 4 s** | PC desligado, fora do Tailscale ou firewall | Confira o Tailscale nos dois lados (`tailscale status`) e a regra "NexoDesk Agent (Tailscale)" |
-| Admin: **Nome não encontrado** | MagicDNS desligado ou nome errado | Use o IP 100.x do painel do Tailscale no campo `host` |
-| Admin: **Certificado do computador remoto recusado** | Impressão no catálogo diferente da apresentada | Se o PC foi reinstalado, atualize `serverCertificateSha256`. Se não, **não conecte** e investigue |
-| Admin: **Falha na autenticação TLS** | Certificado deste Admin não está em `allowedClients` do PC | Adicione a impressão do Admin no `agent.json` e clique em Reiniciar Agent |
-| Admin: **Acesso recusado: ninguém respondeu** | Acesso não assistido desligado e ninguém clicou em Permitir | Peça a alguém no PC para aceitar, ou habilite `unattendedAccessEnabled` conscientemente |
-| Admin: **Já existe uma sessão ativa** | Outro administrador está conectado | Aguarde ou peça para encerrar |
-| Admin: **O computador remoto está bloqueado** | Windows na tela de bloqueio | Fora do escopo: o usuário precisa desbloquear |
-| Admin: **Controle remoto ainda não está disponível** | Modo Controlar pedido antes do M5 | Conecte em Visualizar |
-| Agent: **Nenhum IP Tailscale encontrado** | Tailscale fechado ou desconectado | Abra o Tailscale, entre na tailnet e clique em Tentar de novo |
-| Agent: **certificado não encontrado** | Certificado criado em outra conta do Windows | Rode `New-NexoDeskCertificate.ps1` na conta que usa o PC |
-| Agent: **porta em uso** | Outra cópia aberta ou outro programa na 47115 | Feche a outra cópia ou mude `port` (e o catálogo do Admin) |
-| Agent: campo desconhecido no `agent.json` | Erro de digitação no nome de um campo | Corrija; campos desconhecidos são recusados de propósito |
+| **Indisponível — O NexoDesk não está aberto no PC REMOTO** | Programa fechado lá ou em modo ADMIN | Abra o NexoDesk no PC REMOTO |
+| **Indisponível — Sem resposta** | PC desligado ou fora do Tailscale | Ligue o PC e confira o Tailscale nos dois lados |
+| **Endereço não encontrado** | Nome digitado diferente | Use o endereço mostrado no PC REMOTO, ou o IP 100.x |
+| **Código incorreto** | Código digitado errado | Confira as letras; após 3 erros gere outro no PC REMOTO |
+| **O PC REMOTO recusou a conexão… código** | Código expirou ou não foi gerado | Gere um novo código no PC REMOTO |
+| **O PC REMOTO não reconhece este ADMIN** | Este ADMIN foi removido lá (ou a identidade daqui mudou) | Remova o PC da sua lista e pareie de novo |
+| **A identidade do PC REMOTO mudou desde o pareamento** | PC reinstalado — ou algo interceptando | Se você sabe que foi reinstalado, remova e pareie de novo. Se não, **não conecte** |
+| **Acesso recusado: … recusou ou não respondeu** | Ninguém clicou em Permitir em 30 s | Peça para alguém no PC REMOTO aceitar |
+| **Outro ADMIN já está acessando** | Só um acesso por vez | Aguarde |
+| **O PC REMOTO está com a tela bloqueada** | Windows bloqueado lá | O usuário precisa desbloquear (o NexoDesk não acessa a tela de bloqueio) |
+| **Controlar ainda não está disponível** | Recurso de versão futura | Use *Ver a tela* |
 
-## Onde estão os logs
+## Onde ficam as coisas
 
-- Agent: `%LocalAppData%\NexoDesk\agent-logs\audit-AAAA-MM-DD.jsonl`
-- Admin: `%LocalAppData%\NexoDesk\admin-logs\audit-AAAA-MM-DD.jsonl`
-
-Um evento por linha (JSON), com horário UTC. Os dois apps têm o link **Pasta de logs** no rodapé.
+| O quê | Onde |
+|---|---|
+| Programa | `C:\Program Files\NexoDesk` |
+| Configuração (mantida pelo programa) | `%AppData%\NexoDesk\config.json` |
+| Registro de acessos | `%LocalAppData%\NexoDesk\logs\audit-AAAA-MM-DD.jsonl` (link **Pasta de registros**) |
+| Identidade do computador | Repositório de certificados do usuário (*Pessoal*), nome "NexoDesk …" |
+| Regra de firewall | "NexoDesk (Tailscale)" — TCP 47115, só endereços Tailscale |

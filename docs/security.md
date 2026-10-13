@@ -1,76 +1,86 @@
 # Segurança do NexoDesk
 
-O NexoDesk dá acesso à tela (e, a partir do M5, ao controle) de computadores da empresa. A defesa é em camadas: rede privada, firewall, identidade por dispositivo, política local e auditoria.
+O NexoDesk dá acesso à tela (e, numa próxima versão, ao controle) de computadores da empresa. A defesa é em camadas: rede privada, firewall, identidade por computador, pareamento, permissão local e registro.
 
 ## Camadas
 
 | Camada | O que garante | Onde |
 |---|---|---|
-| Tailscale (WireGuard) | Só dispositivos da tailnet alcançam os PCs; tráfego cifrado; sem porta aberta no roteador | política da tailnet |
-| Política do Tailscale | Só as máquinas administradoras alcançam a porta 47115 dos Agents | ACL/grants (abaixo) |
-| Firewall do Windows | Porta do Agent aceita só pela interface Tailscale, só de 100.64.0.0/10 e fd7a:115c:a1e0::/48, só para o executável do Agent | `scripts/Setup-NexoDeskAgent.ps1` |
-| Escuta restrita | O Agent escuta somente no IP Tailscale; `0.0.0.0`/`::` são recusados no código | `AgentHost`, `AgentConfig.Validate` |
-| TLS mútuo com pinning | Cada lado só aceita o certificado cuja impressão SHA-256 está na sua lista | `PinnedCertificateValidator` |
-| Autorização por identidade | Estar na tailnet **não** dá acesso: o certificado do Admin precisa estar em `allowedClients` daquele PC | `agent.json` |
-| Consentimento local | Com acesso não assistido desligado (padrão), quem está no PC precisa clicar em **Permitir** | `ConsentPolicy` |
-| Indicador e corte local | Faixa fixa no topo da tela durante o acesso, com **Encerrar acesso** | `SessionIndicatorWindow` |
-| Limites anti-abuso | Tamanhos máximos, uma sessão por PC, prazos, 10 tentativas/min por IP, 4 negociações simultâneas | `Protocol`, `AgentHost` |
-| Auditoria | Registro de cada tentativa, autenticação, decisão, início e fim | `JsonLinesAuditLog` |
+| Tailscale (WireGuard) | Só computadores da rede da empresa se alcançam; tráfego cifrado; nenhuma porta aberta no roteador | Tailscale |
+| Política do Tailscale | Só os ADMINs alcançam a porta 47115 dos PCs REMOTOS | painel do Tailscale (exemplo abaixo) |
+| Firewall do Windows | Entrada só para o NexoDesk, só TCP 47115, só de 100.64.0.0/10 e fd7a:115c:a1e0::/48 | criada pelo instalador |
+| Escuta restrita | O PC REMOTO escuta somente no IP Tailscale; 0.0.0.0/:: são recusados no código | `AgentHost`, `AppConfig.Validate` |
+| Identidade por computador | Cada computador tem o seu certificado; não existe senha ou segredo compartilhado | `DeviceIdentity` |
+| TLS mútuo com pinning | Depois do pareamento, cada lado só aceita a impressão SHA-256 que guardou do outro | `PinnedCertificateValidator` |
+| Pareamento por código | Primeiro contato só com o código exibido no PC REMOTO; provas ligadas aos dois certificados | `PairingWindow`, `AdminPairing` |
+| Autorização | Estar na rede Tailscale **não** dá acesso: o ADMIN precisa estar pareado naquele PC REMOTO | `ConfigClientStore` |
+| Permissão local | Por padrão, cada acesso pede **Permitir** no PC REMOTO (recusa sozinho em 30 s) | `ConsentPolicy` |
+| Aviso e corte local | Faixa fixa no topo da tela durante o acesso, com **Encerrar acesso** | `SessionIndicatorWindow` |
+| Limites | Tamanhos máximos, um acesso por PC, prazos, 10 tentativas/min por IP, 3 erros por código | `Protocol`, `AgentHost`, `PairingWindow` |
+| Registro | Cada tentativa, pareamento, decisão, início e fim | `JsonLinesAuditLog` |
 
-## Certificados (identidade por dispositivo)
+## Identidade de cada computador
 
-- Cada PC e cada administrador tem **o seu** certificado (ECDSA P-256, autoassinado, chave **não exportável** no repositório Pessoal do Windows, protegida por DPAPI). Não existe segredo compartilhado.
-- Os arquivos de configuração guardam apenas **impressões SHA-256** (dados públicos), nunca chaves privadas.
-- Validação: impressão na lista, dentro da validade, uso estendido correto (servidor para o Agent, cliente para o Admin), chave mínima P-256/RSA 2048. Erros de cadeia/nome são esperados com certificados autoassinados e são substituídos pelo pinning — o código nunca aceita "qualquer certificado".
-- Validade padrão de 6 meses (`New-NexoDeskCertificate.ps1 -Months`).
+- Criada automaticamente na primeira abertura: certificado ECDSA P-256 autoassinado, válido por 2 anos, com uso de servidor e de cliente (o mesmo computador pode trocar de papel).
+- A chave privada fica no repositório **Pessoal** do usuário do Windows, protegida pelo sistema e **não exportável**. Nunca sai do computador.
+- A configuração guarda só **impressões SHA-256** (dados públicos).
+- Validação: impressão conhecida, dentro da validade, uso correto, chave mínima P-256/RSA 2048. Erros de cadeia/nome são esperados com certificados autoassinados e são substituídos pelo pinning — o código nunca aceita "qualquer certificado". A única exceção controlada é durante um pareamento (abaixo).
 
-### Revogar ou trocar um certificado
+## Pareamento
 
-1. Remova a impressão de `allowedClients` em todos os `agent.json` (Admin perdido) ou do catálogo `admin.json` (Agent comprometido).
-2. Clique em **Reiniciar Agent** (ou reinicie o Admin) para recarregar.
-3. Apague o certificado antigo: `Remove-Item Cert:\CurrentUser\My\<thumbprint>`.
-4. Gere um novo com `New-NexoDeskCertificate.ps1` e cadastre a nova impressão.
-5. Se um dispositivo foi perdido, remova-o também da tailnet no painel do Tailscale.
+1. No PC REMOTO, **Gerar código** abre uma janela de 10 minutos com um código de 12 caracteres (60 bits). Uso único; fecha após 3 erros.
+2. No ADMIN, **Adicionar PC REMOTO** com endereço + código.
+3. Cada lado prova que conhece o código com um HMAC derivado por PBKDF2 (200 mil iterações) e **ligado às impressões dos dois certificados vistos na conexão**. Se houver alguém no meio, as impressões diferem e o pareamento falha nos dois lados.
+4. Só então cada lado guarda a impressão do outro. Daí em diante, conexões sem pareamento são recusadas já no TLS.
+
+Detalhes do protocolo em [protocol.md](protocol.md#pareamento). Cuidados: passe o código só para quem vai ser ADMIN e só enquanto ele estiver fazendo o pareamento.
+
+## Remover acesso
+
+- **No PC REMOTO:** ADMINS que podem acessar → **Remover**. Um acesso em andamento desse ADMIN é encerrado na hora.
+- **No ADMIN:** **Remover** na linha do PC REMOTO (só tira da lista dele).
+- Computador perdido ou roubado: remova-o em todos os PCs REMOTOS e também da rede no painel do Tailscale.
 
 ## Política do Tailscale (exemplo)
 
-Remova a regra padrão que libera tudo e permita apenas o necessário. Use tags para as máquinas. A sintaxe do Tailscale muda com o tempo — confira a documentação atual antes de aplicar.
+Remova a regra padrão que libera tudo e permita apenas o necessário, usando tags. A sintaxe do Tailscale muda com o tempo — confira a documentação atual antes de aplicar.
 
 ```json
 {
   "tagOwners": {
     "tag:nexodesk-admin": ["autogroup:admin"],
-    "tag:nexodesk-agent": ["autogroup:admin"]
+    "tag:nexodesk-remoto": ["autogroup:admin"]
   },
   "grants": [
     {
       "src": ["tag:nexodesk-admin"],
-      "dst": ["tag:nexodesk-agent"],
+      "dst": ["tag:nexodesk-remoto"],
       "ip":  ["tcp:47115"]
     }
   ]
 }
 ```
 
-## Arquivos e permissões
+## Arquivos
 
-| Arquivo | Conteúdo | Proteção |
-|---|---|---|
-| `%ProgramData%\NexoDesk\agent.json` | política do Agent (sem segredos) | só administradores alteram; usuários leem |
-| `%AppData%\NexoDesk\admin.json` | identidade e catálogo do Admin (sem segredos) | perfil do usuário |
-| `%LocalAppData%\NexoDesk\agent-logs\audit-*.jsonl` | auditoria do Agent | perfil do usuário |
-| `%LocalAppData%\NexoDesk\admin-logs\audit-*.jsonl` | auditoria do Admin | perfil do usuário |
+| Arquivo | Conteúdo |
+|---|---|
+| `%AppData%\NexoDesk\config.json` | papel, nome, pareamentos e opções (sem segredos), mantido pelo programa |
+| `%LocalAppData%\NexoDesk\logs\audit-*.jsonl` | registro de acessos |
+| Repositório *Pessoal* do Windows | identidade do computador (com a chave privada) |
 
-**Limitação conhecida:** os logs do Agent ficam no perfil do usuário do PC, que pode apagá-los. Para auditoria resistente a adulteração, envie os logs a um destino central (fase posterior).
+**Decisão consciente:** a configuração do PC REMOTO fica no perfil do usuário, para que ele mesmo possa parear e remover ADMINs pela tela sem ser administrador do Windows. Quem usa o PC REMOTO é quem decide quem o acessa.
+
+**Limitação conhecida:** o registro fica no perfil do usuário, que pode apagá-lo. Para auditoria à prova de adulteração, enviar os registros a um destino central (fase posterior).
 
 ## O que é registrado
 
-Data/hora UTC, máquina, nome e impressão do administrador, IP de origem, sessão, resultado, motivo e versão. **Nunca** imagens da tela, teclas digitadas, área de transferência, senhas ou chaves.
+Data/hora UTC, computador, nome e impressão do ADMIN, IP de origem, acesso, resultado, motivo e versão. **Nunca** imagens da tela, teclas digitadas, área de transferência, senhas ou chaves.
 
 ## Fora do escopo (deliberadamente)
 
-Tela de login, tela bloqueada, UAC/desktop seguro, controle de processos elevados, acesso antes do logon. O Agent recusa com "sessão indisponível" em vez de tentar contornar o Windows. Qualquer extensão privilegiada exige novo projeto de segurança.
+Tela de login, tela bloqueada, UAC/desktop seguro, controle de programas elevados, acesso antes do logon. O PC REMOTO recusa com motivo claro em vez de tentar contornar o Windows.
 
 ## Menor privilégio
 
-Admin e Agent rodam **sem elevação** (`asInvoker` no manifesto). Só o script de instalação do Agent pede administrador, para gravar a política e a regra de firewall.
+O programa roda **sem elevação** (`asInvoker`). Só o instalador pede administrador, para instalar em *Arquivos de Programas* e criar a regra de firewall. O instalador ainda **não é assinado** digitalmente (o Windows mostra um aviso); assinar é recomendado antes do uso amplo.
