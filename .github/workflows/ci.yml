@@ -3,7 +3,6 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -50,11 +49,19 @@ jobs:
           name: NexoDesk-Setup
           path: artifacts/*.exe
 
-      - name: Publicar na página Releases (tags v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publicar o instalador em Releases (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "${{ github.ref_name }}"
-          gh release create $tag (Get-ChildItem artifacts/*.exe).FullName --title "NexoDesk $tag" --notes "Instalador único do NexoDesk (ADMIN e PC REMOTO). Veja docs/tutorial.md."
+          [xml]$props = Get-Content Directory.Build.props
+          $tag = "v" + $props.Project.PropertyGroup.Version
+          $setup = (Get-ChildItem artifacts/*.exe).FullName
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $setup --clobber
+          } else {
+            gh release create $tag $setup --target $env:GITHUB_SHA --title "NexoDesk $tag" `
+              --notes "Instalador único do NexoDesk: o mesmo para o ADMIN e para o PC REMOTO. Passo a passo em docs/tutorial.md."
+          }

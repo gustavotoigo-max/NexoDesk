@@ -79,4 +79,4 @@ dotnet publish src\NexoDesk.App -c Release -r win-x64 --self-contained true -o p
 iscc /DAppVersion=0.3.0 installer\NexoDesk.iss     # gera artifacts\NexoDesk-Setup-0.3.0.exe
 ```
 
-O GitHub Actions faz isso a cada envio. Com uma tag `v*`, o instalador vai para **Releases**.
+O GitHub Actions faz isso a cada envio para a `main` e publica o instalador em **Releases**.
