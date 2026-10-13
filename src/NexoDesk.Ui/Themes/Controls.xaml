@@ -7,6 +7,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="clr-namespace:NexoDesk.Ui">
 
+    <!-- Conversores -->
+    <ui:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+    <ui:BoolToVisibilityConverter x:Key="InverseBoolToVisibility" Invert="True" />
+
     <!-- ============================== Foco ============================== -->
     <!-- Anel ciano de 2 px, afastado 3 px -->
     <Style x:Key="Nx.FocusVisual">
@@ -730,6 +734,45 @@
         <Setter Property="Margin" Value="8,0" />
         <Setter Property="Foreground" Value="{DynamicResource Nx.TextSubtle}" />
         <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- Cartão de escolha (RadioButton): borda azul quando escolhido. Conteúdo livre. -->
+    <Style x:Key="Nx.ChoiceCard" TargetType="RadioButton">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Nx.FocusVisual}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Foreground" Value="{DynamicResource Nx.Text}" />
+        <Setter Property="Background" Value="{DynamicResource Nx.Surface}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Nx.Border}" />
+        <Setter Property="Padding" Value="20,18" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Card" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1.5" CornerRadius="12" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource Nx.BorderHover}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource Nx.Blue}" />
+                            <Setter TargetName="Card" Property="Background" Value="{DynamicResource Nx.BlueSoft}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Código grande (pareamento) -->
+    <Style x:Key="Nx.BigCode" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource Nx.Mono}" />
+        <Setter Property="FontSize" Value="30" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource Nx.Text}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
     </Style>
 
     <!-- Linha de log: hora em cinza e texto colorido pelo nível (ok, aviso, erro) -->

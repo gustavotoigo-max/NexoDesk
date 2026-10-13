@@ -3,11 +3,15 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build-test:
+  build-test-installer:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,14 +29,32 @@ jobs:
       - name: Testar
         run: dotnet test NexoDesk.sln -c Release --no-build --logger "trx;LogFileName=resultados.trx"
 
-      - name: Publicar Admin e Agent (win-x64)
+      - name: Publicar o NexoDesk (self-contained, win-x64)
+        run: dotnet publish src/NexoDesk.App/NexoDesk.App.csproj -c Release -r win-x64 --self-contained true -o publish/app
+
+      - name: Gerar o instalador (Inno Setup)
+        shell: pwsh
         run: |
-          dotnet publish src/NexoDesk.Admin/NexoDesk.Admin.csproj -c Release -r win-x64 --self-contained false -o publish/Admin
-          dotnet publish src/NexoDesk.Agent/NexoDesk.Agent.csproj -c Release -r win-x64 --self-contained false -o publish/Agent
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y | Out-Null
+          }
+          [xml]$props = Get-Content Directory.Build.props
+          $version = $props.Project.PropertyGroup.Version
+          & $iscc "/DAppVersion=$version" installer\NexoDesk.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem artifacts
 
       - uses: actions/upload-artifact@v4
         with:
-          name: nexodesk-win-x64
-          path: |
-            publish/
-            scripts/
+          name: NexoDesk-Setup
+          path: artifacts/*.exe
+
+      - name: Publicar na página Releases (tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          gh release create $tag (Get-ChildItem artifacts/*.exe).FullName --title "NexoDesk $tag" --notes "Instalador único do NexoDesk (ADMIN e PC REMOTO). Veja docs/tutorial.md."

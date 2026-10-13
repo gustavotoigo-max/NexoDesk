@@ -1,0 +1,246 @@
+<UserControl x:Class="NexoDesk.App.Views.RemoteView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="clr-namespace:NexoDesk.Ui.Controls;assembly=NexoDesk.Ui"
+             xmlns:vm="clr-namespace:NexoDesk.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:RemoteViewModel}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="28,22,28,24">
+
+            <!-- Cabeçalho -->
+            <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{DynamicResource Nx.PageTitle}" Text="PC REMOTO" />
+                        <ui:NxBadge Kind="{Binding StatusKind}" ShowDot="True" Content="{Binding StatusText}" Margin="12,4,0,0" />
+                    </StackPanel>
+                    <TextBlock Style="{DynamicResource Nx.PageSubtitle}"
+                               Text="Só o ADMIN pareado consegue acessar, e cada acesso pede Permitir aqui. Fechar a janela mantém o NexoDesk perto do relógio." />
+                </StackPanel>
+                <Button Grid.Column="1" Style="{DynamicResource Nx.Button}" Content="Tentar de novo" Command="{Binding RestartCommand}" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <Button.Visibility>
+                        <Binding Path="HasProblem" Converter="{StaticResource BoolToVisibility}" />
+                    </Button.Visibility>
+                </Button>
+            </Grid>
+
+            <!-- Problema -->
+            <Border Margin="0,0,0,16">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource Nx.Alert.Danger}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasProblem}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Nx.AlertTitle}" Text="Este PC REMOTO ainda não pode ser acessado" />
+                    <TextBlock Style="{DynamicResource Nx.AlertText}" Text="{Binding Problem}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Acesso ativo -->
+            <Border Margin="0,0,0,16">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource Nx.Alert.Warning}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasSession}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock FontFamily="{DynamicResource Nx.Icons}" Text="&#xE7B3;" FontSize="18" Foreground="{DynamicResource Nx.Warning}" Margin="0,0,12,0" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Style="{DynamicResource Nx.AlertTitle}">
+                            <Run Text="ADMIN" /> <Run Text="{Binding SessionAdmin, Mode=OneWay}" /> <Run Text="está acessando este computador" />
+                        </TextBlock>
+                        <TextBlock Style="{DynamicResource Nx.AlertText}" Text="{Binding SessionDetail}" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Style="{DynamicResource Nx.Button.DangerSolid}" Content="Encerrar acesso" Command="{Binding EndSessionCommand}" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- Endereço + pareamento -->
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Endereço -->
+                <Border Style="{DynamicResource Nx.Card}">
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="ENDEREÇO DESTE PC REMOTO" />
+                        <TextBlock Style="{DynamicResource Nx.Muted}" Text="O ADMIN digita este endereço ao adicionar este computador." />
+                        <Border Background="{DynamicResource Nx.SurfaceAlt}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,12,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Address}" FontFamily="{DynamicResource Nx.Mono}" FontSize="14" FontWeight="SemiBold"
+                                           TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Style="{DynamicResource Nx.Button.Ghost.Small}" Content="Copiar" Command="{Binding CopyAddressCommand}" Margin="8,0,0,0" />
+                            </Grid>
+                        </Border>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="26" />
+                                <RowDefinition Height="26" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Style="{DynamicResource Nx.Hint}" Margin="0" VerticalAlignment="Center" Text="IP Tailscale" />
+                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding IpText}" FontFamily="{DynamicResource Nx.Mono}" FontSize="12" />
+                            <TextBlock Grid.Row="1" Style="{DynamicResource Nx.Hint}" Margin="0" VerticalAlignment="Center" Text="Tailscale" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" Text="{Binding TailscaleText}" FontSize="12" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Pareamento -->
+                <Border Grid.Column="2" Style="{DynamicResource Nx.Card}">
+                    <Grid>
+                        <!-- Sem código -->
+                        <StackPanel>
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PairingActive}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="PAREAR UM ADMIN" />
+                            <TextBlock Style="{DynamicResource Nx.Muted}"
+                                       Text="Faça isso uma vez para cada ADMIN. Gere o código e, no ADMIN, clique em Adicionar PC REMOTO e digite o endereço e o código." />
+                            <Button Style="{DynamicResource Nx.Button.Primary}" Content="Gerar código de pareamento" Command="{Binding OpenPairingCommand}"
+                                    HorizontalAlignment="Left" Margin="0,16,0,0" />
+                        </StackPanel>
+
+                        <!-- Com código -->
+                        <StackPanel>
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PairingActive}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="CÓDIGO DE PAREAMENTO" />
+                            <Border Background="{DynamicResource Nx.BlueSoft}" BorderBrush="{DynamicResource Nx.BlueSelection}" BorderThickness="1" CornerRadius="10" Padding="12,14">
+                                <StackPanel>
+                                    <TextBlock Style="{DynamicResource Nx.BigCode}" Text="{Binding PairingCode}" />
+                                    <TextBlock Text="{Binding PairingRemaining}" FontSize="12" Foreground="{DynamicResource Nx.TextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Style="{DynamicResource Nx.Hint}" Text="Vale uma vez. Passe o código só para quem vai ser ADMIN deste computador." />
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <Button Style="{DynamicResource Nx.Button.Small}" Content="Copiar código" Command="{Binding CopyCodeCommand}" Margin="0,0,8,0" />
+                                <Button Style="{DynamicResource Nx.Button.Ghost.Small}" Content="Cancelar" Command="{Binding CancelPairingCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ADMINs pareados -->
+            <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="ADMINS QUE PODEM ACESSAR ESTE COMPUTADOR" />
+                    <Border CornerRadius="10" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasAdmins}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <DataGrid Style="{DynamicResource Nx.Table}" ItemsSource="{Binding Admins}" BorderThickness="0" MaxHeight="220">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ADMIN" Binding="{Binding Name}" Width="*" />
+                                <DataGridTextColumn Header="Pareado em" Binding="{Binding PairedAtText}" Width="140" />
+                                <DataGridTextColumn Header="Identidade" Binding="{Binding ShortFingerprint}" Width="190">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Nx.MonoText}">
+                                            <Setter Property="VerticalAlignment" Value="Center" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTemplateColumn Header="" Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type vm:AdminRow}">
+                                            <Button Style="{DynamicResource Nx.Button.Ghost.Small}" Content="Remover" Foreground="{DynamicResource Nx.Danger}"
+                                                    Command="{Binding DataContext.RemoveAdminCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                    <TextBlock Style="{DynamicResource Nx.Muted}" Text="Nenhum ADMIN pareado ainda. Use Gerar código de pareamento.">
+                        <TextBlock.Visibility>
+                            <Binding Path="HasAdmins" Converter="{StaticResource InverseBoolToVisibility}" />
+                        </TextBlock.Visibility>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- Opções -->
+            <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="OPÇÕES" />
+                    <CheckBox Style="{DynamicResource Nx.Switch}" IsChecked="{Binding StartWithWindows}" Content="Abrir o NexoDesk junto com o Windows (recomendado)" />
+                    <TextBlock Style="{DynamicResource Nx.Hint}" Margin="46,4,0,14" Text="Sem isso, o ADMIN só consegue acessar depois que alguém abrir o NexoDesk aqui." />
+                    <CheckBox Style="{DynamicResource Nx.Switch}" IsChecked="{Binding UnattendedAccess}" Content="Permitir acesso sem confirmação" />
+                    <TextBlock Style="{DynamicResource Nx.Hint}" Margin="46,4,0,0"
+                               Text="Desligado (padrão): cada acesso pede Permitir neste computador. Ligado: o ADMIN pareado entra direto; o aviso no topo da tela continua aparecendo." />
+                </StackPanel>
+            </Border>
+
+            <!-- Registro -->
+            <Border Style="{DynamicResource Nx.Card}">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="REGISTRO" Margin="0" VerticalAlignment="Center" />
+                        <Button Style="{DynamicResource Nx.Link}" Content="Limpar" Command="{Binding ClearLogCommand}" HorizontalAlignment="Right" />
+                    </Grid>
+                    <Border Style="{DynamicResource Nx.Log}" Height="150">
+                        <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Log}" ItemTemplate="{DynamicResource Nx.LogLineTemplate}" />
+                        </ScrollViewer>
+                    </Border>
+                    <TextBlock Style="{DynamicResource Nx.Hint}" Text="O registro guarda horários, quem acessou e o resultado. Nunca grava imagens da tela nem o que é digitado." />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

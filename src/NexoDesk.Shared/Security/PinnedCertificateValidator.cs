@@ -26,24 +26,39 @@ public sealed class PinnedCertificateValidator
     private const string ServerAuthOid = "1.3.6.1.5.5.7.3.1";
     private const string ClientAuthOid = "1.3.6.1.5.5.7.3.2";
 
-    private readonly HashSet<string> _pins;
+    private readonly Func<string, bool> _isPinned;
+    private readonly Func<bool> _acceptUnpinned;
     private readonly CertificateUsage _usage;
     private readonly TimeProvider _time;
 
+    /// <summary>Lista fixa de impressões autorizadas.</summary>
     public PinnedCertificateValidator(IEnumerable<string> fingerprints, CertificateUsage usage, TimeProvider? time = null)
     {
-        _pins = new HashSet<string>(StringComparer.Ordinal);
+        var pins = new HashSet<string>(StringComparer.Ordinal);
         foreach (string raw in fingerprints)
         {
             string? normalized = CertificateFingerprint.Normalize(raw)
                 ?? throw new ArgumentException($"Impressão digital inválida: '{raw}'. Use o SHA-256 com 64 dígitos hexadecimais.");
-            _pins.Add(normalized);
+            pins.Add(normalized);
         }
+        _isPinned = pins.Contains;
+        _acceptUnpinned = static () => false;
         _usage = usage;
         _time = time ?? TimeProvider.System;
     }
 
-    public int Count => _pins.Count;
+    /// <summary>
+    /// Lista dinâmica (pareamentos podem mudar com o programa aberto). <paramref name="acceptUnpinned"/> só deve
+    /// retornar true durante um pareamento: o certificado desconhecido ainda passa pelas checagens de validade,
+    /// uso e chave, e a identidade é então provada pelo código de pareamento.
+    /// </summary>
+    public PinnedCertificateValidator(Func<string, bool> isPinned, Func<bool> acceptUnpinned, CertificateUsage usage, TimeProvider? time = null)
+    {
+        _isPinned = isPinned;
+        _acceptUnpinned = acceptUnpinned;
+        _usage = usage;
+        _time = time ?? TimeProvider.System;
+    }
 
     public CertificateCheckResult Check(X509Certificate? certificate, SslPolicyErrors errors)
     {
@@ -54,7 +69,8 @@ public sealed class PinnedCertificateValidator
         string fingerprint = CertificateFingerprint.Sha256(cert);
         string subject = cert.Subject;
 
-        if (!_pins.Contains(fingerprint))
+        bool pinned = _isPinned(fingerprint);
+        if (!pinned && !_acceptUnpinned())
             return new(false, fingerprint, subject, "Certificado não está na lista autorizada.");
 
         DateTime now = _time.GetUtcNow().UtcDateTime;
@@ -69,7 +85,7 @@ public sealed class PinnedCertificateValidator
         if (!HasStrongKey(cert))
             return new(false, fingerprint, subject, "Chave do certificado fraca (mínimo RSA 2048 ou ECDSA P-256).");
 
-        return new(true, fingerprint, subject, "Certificado autorizado.");
+        return new(true, fingerprint, subject, pinned ? "Certificado autorizado." : "Certificado novo aceito para pareamento.");
     }
 
     /// <summary>Callback para SslStream. O resultado de cada verificação é entregue a <paramref name="onResult"/>.</summary>

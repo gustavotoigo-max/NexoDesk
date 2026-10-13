@@ -1,0 +1,45 @@
+<ui:NxWindow x:Class="NexoDesk.App.Views.MainWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="clr-namespace:NexoDesk.Ui.Controls;assembly=NexoDesk.Ui"
+             xmlns:vm="clr-namespace:NexoDesk.App.ViewModels"
+             xmlns:views="clr-namespace:NexoDesk.App.Views"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:ShellViewModel}"
+             Title="NexoDesk"
+             Tagline="{Binding Tagline}"
+             Width="1080" Height="780" MinWidth="820" MinHeight="560"
+             WindowStartupLocation="CenterScreen">
+
+    <ui:NxWindow.Resources>
+        <DataTemplate DataType="{x:Type vm:AdminViewModel}">
+            <views:AdminView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:RemoteViewModel}">
+            <views:RemoteView />
+        </DataTemplate>
+    </ui:NxWindow.Resources>
+
+    <ui:NxWindow.TitleBarContent>
+        <ui:NxPill Content="{Binding ModeText}" Margin="0,0,4,0" />
+    </ui:NxWindow.TitleBarContent>
+
+    <ui:NxWindow.FooterContent>
+        <TextBlock>
+            <Run Text="Nexotool · NexoDesk" /> <Run Text="{Binding Version, Mode=OneWay}" />
+            <Run Text="  ·  Este computador:" /> <Run Text="{Binding DeviceName, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
+        </TextBlock>
+    </ui:NxWindow.FooterContent>
+
+    <ui:NxWindow.FooterRightContent>
+        <StackPanel Orientation="Horizontal">
+            <Button Style="{DynamicResource Nx.FooterLink}" Content="Configurações" Click="OnOpenSettings" />
+            <TextBlock Text="·" Margin="10,0" Foreground="{DynamicResource Nx.OnNavyMuted}" />
+            <Button Style="{DynamicResource Nx.FooterLink}" Content="Pasta de registros" Command="{Binding OpenLogsCommand}" />
+        </StackPanel>
+    </ui:NxWindow.FooterRightContent>
+
+    <ContentControl Content="{Binding Content}" Focusable="False" />
+</ui:NxWindow>

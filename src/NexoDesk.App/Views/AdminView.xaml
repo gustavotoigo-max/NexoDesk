@@ -1,0 +1,184 @@
+<UserControl x:Class="NexoDesk.App.Views.AdminView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="clr-namespace:NexoDesk.Ui.Controls;assembly=NexoDesk.Ui"
+             xmlns:vm="clr-namespace:NexoDesk.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:AdminViewModel}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="28,22,28,24">
+
+            <!-- Cabeçalho -->
+            <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Nx.PageTitle}" Text="PCs REMOTOS" />
+                    <TextBlock Style="{DynamicResource Nx.PageSubtitle}" Text="Escolha um PC REMOTO e clique em Conectar. Para incluir um novo, use Adicionar PC REMOTO." />
+                </StackPanel>
+                <Button Grid.Column="1" Style="{DynamicResource Nx.Button.Primary}" Command="{Binding AddComputerCommand}" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{DynamicResource Nx.Icons}" Text="&#xE710;" FontSize="12" Margin="0,1,8,0" />
+                        <TextBlock Text="Adicionar PC REMOTO" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- Lista -->
+            <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,16">
+                <StackPanel>
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center">
+                            <Run Text="PCs REMOTOS PAREADOS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Nx.TextSubtle}" />
+                            <Run Text="  " /><Run Text="{Binding CountText, Mode=OneWay}" FontSize="11" Foreground="{DynamicResource Nx.TextSubtle}" />
+                        </TextBlock>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Summary}" FontSize="12" Foreground="{DynamicResource Nx.TextMuted}" Margin="0,0,16,0" VerticalAlignment="Center" />
+                            <Button Style="{DynamicResource Nx.Link}" Content="Verificar todos" Command="{Binding CheckAllCommand}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border CornerRadius="10" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasMachines}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <DataGrid Style="{DynamicResource Nx.Table}" ItemsSource="{Binding Machines}" BorderThickness="0" RowHeight="52">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="PC REMOTO" Width="2*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type vm:MachineViewModel}">
+                                            <StackPanel ToolTip="{Binding Detail}" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Address}" Style="{DynamicResource Nx.MonoText}" FontSize="11" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Situação" Width="140">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type vm:MachineViewModel}">
+                                            <ui:NxBadge Kind="{Binding StatusKind}" ShowDot="True" Content="{Binding StatusText}" ToolTip="{Binding Detail}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Verificado às" Width="110" Binding="{Binding LastCheckText}" />
+                                <DataGridTemplateColumn Header="" Width="Auto" MinWidth="250">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type vm:MachineViewModel}">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Button Style="{DynamicResource Nx.Button.Ghost.Small}" Content="Verificar" Margin="0,0,4,0"
+                                                        Command="{Binding DataContext.CheckCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" />
+                                                <Button Style="{DynamicResource Nx.Button.Ghost.Small}" Content="Remover" Margin="0,0,8,0" Foreground="{DynamicResource Nx.Danger}"
+                                                        Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" />
+                                                <Button Style="{DynamicResource Nx.Button.Primary.Small}" Content="Conectar" MinWidth="96"
+                                                        Command="{Binding DataContext.ConnectCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+
+                    <!-- Vazio -->
+                    <StackPanel HorizontalAlignment="Center" Margin="20,28">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasMachines}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Border Width="48" Height="48" CornerRadius="24" Background="{DynamicResource Nx.BlueSoft}" HorizontalAlignment="Center" Margin="0,0,0,12">
+                            <TextBlock FontFamily="{DynamicResource Nx.Icons}" Text="&#xE977;" FontSize="20" Foreground="{DynamicResource Nx.Blue}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="Nenhum PC REMOTO ainda" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Center" />
+                        <TextBlock Style="{DynamicResource Nx.Muted}" TextAlignment="Center" MaxWidth="440" Margin="0,6,0,16"
+                                   Text="Instale o NexoDesk no outro computador, escolha PC REMOTO e clique em Gerar código. Depois clique aqui em Adicionar PC REMOTO e digite o endereço e o código que aparecem lá." />
+                        <Button Style="{DynamicResource Nx.Button.Primary}" Content="Adicionar PC REMOTO" Command="{Binding AddComputerCommand}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Conexão -->
+            <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="CONEXÃO" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{DynamicResource Nx.FieldLabel}" Text="Modo" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Border Style="{DynamicResource Nx.Segmented}">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Mode" Content="Ver a tela" IsChecked="{Binding ViewMode}" />
+                                    <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Mode" Content="Controlar" IsChecked="{Binding ControlMode}" Margin="0" />
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Style="{DynamicResource Nx.Hint}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                       Text="Controlar (mouse e teclado) chega numa próxima versão." />
+                        </StackPanel>
+                    </Grid>
+
+                    <ProgressBar Margin="0,16,0,0" IsIndeterminate="True">
+                        <ProgressBar.Style>
+                            <Style TargetType="ProgressBar" BasedOn="{StaticResource Nx.Progress}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsConnecting}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ProgressBar.Style>
+                    </ProgressBar>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{DynamicResource Nx.ProgressStatus}" Text="{Binding StatusText}" Tag="{Binding StatusTag}" />
+                        <Button Grid.Column="1" Style="{DynamicResource Nx.Button.Small}" Content="Cancelar" Margin="12,8,0,0" VerticalAlignment="Top"
+                                Command="{Binding CancelConnectCommand}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Registro -->
+            <Border Style="{DynamicResource Nx.Card}">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="REGISTRO" Margin="0" VerticalAlignment="Center" />
+                        <Button Style="{DynamicResource Nx.Link}" Content="Limpar" Command="{Binding ClearLogCommand}" HorizontalAlignment="Right" />
+                    </Grid>
+                    <Border Style="{DynamicResource Nx.Log}" Height="150">
+                        <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Log}" ItemTemplate="{DynamicResource Nx.LogLineTemplate}" />
+                        </ScrollViewer>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

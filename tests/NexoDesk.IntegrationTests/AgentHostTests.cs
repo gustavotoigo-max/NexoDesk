@@ -17,7 +17,7 @@ public class AgentHostTests
         {
             Endpoint = new IPEndPoint(IPAddress.Loopback, 0),
             ServerCertificate = server,
-            AllowedClients = allowed.ToList(),
+            Clients = new InMemoryClientStore(allowed),
             MaxConnectionAttemptsPerMinute = attemptsPerMinute,
             Session = new AgentSessionOptions
             {
@@ -49,7 +49,7 @@ public class AgentHostTests
         {
             Endpoint = new IPEndPoint(IPAddress.Any, 0),
             ServerCertificate = server,
-            AllowedClients = [new AuthorizedClient("x", new string('A', 64))],
+            Clients = new InMemoryClientStore(),
             Session = new AgentSessionOptions { ServerId = "x", DisplayName = "x", AppVersion = "t" },
         }, ScriptedPolicy.AllowAll, new MemoryAuditLog()));
     }
@@ -69,7 +69,7 @@ public class AgentHostTests
 
         AdminSession first = await AdminSession.ConnectAsync(Options(host, server, admin1, "a1"), CancellationToken.None);
         await activated.Task.WaitAsync(Wait);
-        Assert.Equal("Admin 1", host.CurrentSession!.Client.Name);
+        Assert.Equal("Admin 1", host.CurrentSession!.ClientName);
 
         var ex = await Assert.ThrowsAsync<SessionDeniedException>(() => AdminSession.ConnectAsync(Options(host, server, admin2, "a2"), CancellationToken.None));
         Assert.Equal(DenyReason.Busy, ex.Reason);
@@ -158,7 +158,7 @@ public class AgentHostTests
         await activated.Task.WaitAsync(Wait);
 
         host.EndCurrentSession(EndReason.LocalUserEnded);
-        Assert.Contains("usuário do computador remoto", await ended.Task.WaitAsync(Wait));
+        Assert.Contains("Quem está no PC REMOTO", await ended.Task.WaitAsync(Wait));
         await WaitUntilAsync(() => host.CurrentSession is null);
     }
 

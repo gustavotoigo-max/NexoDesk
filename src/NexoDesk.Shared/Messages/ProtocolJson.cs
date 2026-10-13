@@ -23,6 +23,8 @@ namespace NexoDesk.Shared.Messages;
 [JsonSerializable(typeof(PongMessage))]
 [JsonSerializable(typeof(EndSessionMessage))]
 [JsonSerializable(typeof(ErrorMessage))]
+[JsonSerializable(typeof(PairRequestMessage))]
+[JsonSerializable(typeof(PairResultMessage))]
 internal sealed partial class ProtocolJsonContext : JsonSerializerContext;
 
 /// <summary>Serialização das mensagens de controle (JSON UTF-8) com validação obrigatória.</summary>
@@ -42,6 +44,8 @@ public static class ProtocolJson
         [typeof(PongMessage)] = MessageType.Pong,
         [typeof(EndSessionMessage)] = MessageType.EndSession,
         [typeof(ErrorMessage)] = MessageType.Error,
+        [typeof(PairRequestMessage)] = MessageType.PairRequest,
+        [typeof(PairResultMessage)] = MessageType.PairResult,
     };
 
     public static MessageType TypeOf<T>() where T : IControlMessage => TypeMap[typeof(T)];

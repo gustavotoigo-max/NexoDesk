@@ -60,7 +60,7 @@ public static class TlsConnector
             };
 
             await ssl.AuthenticateAsClientAsync(options, timeoutCts.Token).ConfigureAwait(false);
-            return new SecureChannel(ssl, check!.Fingerprint!, check.Subject ?? "", tcp.Client.RemoteEndPoint);
+            return new SecureChannel(ssl, CertificateFingerprint.Sha256(clientCertificate), check!.Fingerprint!, check.Subject ?? "", tcp.Client.RemoteEndPoint);
         }
         catch (Exception ex)
         {
@@ -106,7 +106,7 @@ public static class TlsConnector
             };
 
             await ssl.AuthenticateAsServerAsync(options, timeoutCts.Token).ConfigureAwait(false);
-            return new SecureChannel(ssl, check!.Fingerprint!, check.Subject ?? "", remote);
+            return new SecureChannel(ssl, CertificateFingerprint.Sha256(serverCertificate), check!.Fingerprint!, check.Subject ?? "", remote);
         }
         catch (Exception ex)
         {
@@ -121,7 +121,7 @@ public static class TlsConnector
 
     private static ChannelAuthenticationException Translate(Exception ex, CertificateCheckResult? check, bool timedOut, bool server)
     {
-        string who = server ? "do computador remoto" : "do administrador";
+        string who = server ? "do PC REMOTO" : "do ADMIN";
         if (check is { Accepted: false })
             return new ChannelAuthenticationException($"Certificado {who} recusado: {check.Reason}", check.Fingerprint, ex);
         if (timedOut)
@@ -130,17 +130,17 @@ public static class TlsConnector
         return ex switch
         {
             SocketException se when se.SocketErrorCode == SocketError.ConnectionRefused =>
-                new ChannelAuthenticationException("Conexão recusada: o NexoDesk Agent não está escutando nesse endereço/porta.", null, ex),
+                new ChannelAuthenticationException("Conexão recusada: o NexoDesk não está aberto no PC REMOTO (ou está em modo ADMIN).", null, ex),
             SocketException se when se.SocketErrorCode is SocketError.HostNotFound or SocketError.NoData =>
                 new ChannelAuthenticationException("Endereço não encontrado. Confira o nome MagicDNS ou o IP Tailscale.", null, ex),
             SocketException se =>
                 new ChannelAuthenticationException($"Falha de rede ({se.SocketErrorCode}). Verifique se o Tailscale está conectado nos dois computadores.", null, ex),
             AuthenticationException =>
                 new ChannelAuthenticationException(server
-                    ? "Falha na autenticação TLS. Confira se o certificado deste administrador está autorizado no computador remoto."
-                    : "Falha na autenticação TLS com o administrador.", check?.Fingerprint, ex),
+                    ? "O PC REMOTO não reconhece este ADMIN. Ele pode ter sido removido lá: pareie de novo."
+                    : "Falha na autenticação com o ADMIN.", check?.Fingerprint, ex),
             IOException =>
-                new ChannelAuthenticationException("A conexão foi encerrada durante a negociação segura. O outro lado pode ter recusado este certificado.", check?.Fingerprint, ex),
+                new ChannelAuthenticationException("A conexão foi encerrada durante a negociação segura. O PC REMOTO pode não reconhecer este ADMIN (pareie de novo) ou o código de pareamento expirou.", check?.Fingerprint, ex),
             _ => new ChannelAuthenticationException($"Falha ao conectar: {ex.Message}", check?.Fingerprint, ex),
         };
     }

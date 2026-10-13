@@ -17,14 +17,17 @@ public sealed class SecureChannel : IAsyncDisposable
     private int _sequence;
     private int _disposed;
 
-    internal SecureChannel(SslStream stream, string remoteFingerprint, string remoteSubject, EndPoint? remoteEndPoint)
+    internal SecureChannel(SslStream stream, string localFingerprint, string remoteFingerprint, string remoteSubject, EndPoint? remoteEndPoint)
     {
         _stream = stream;
+        LocalFingerprint = localFingerprint;
         RemoteFingerprint = remoteFingerprint;
         RemoteSubject = remoteSubject;
         RemoteEndPoint = remoteEndPoint;
     }
 
+    /// <summary>Impressão do certificado deste lado (usada nas provas de pareamento).</summary>
+    public string LocalFingerprint { get; }
     public string RemoteFingerprint { get; }
     public string RemoteSubject { get; }
     public EndPoint? RemoteEndPoint { get; }

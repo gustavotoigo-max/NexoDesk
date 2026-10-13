@@ -12,7 +12,11 @@ public sealed record AgentHostOptions
 {
     public required IPEndPoint Endpoint { get; init; }
     public required X509Certificate2 ServerCertificate { get; init; }
-    public required IReadOnlyList<AuthorizedClient> AllowedClients { get; init; }
+    /// <summary>ADMINs pareados (pode mudar com o programa aberto).</summary>
+    public required IClientStore Clients { get; init; }
+
+    /// <summary>Janela de pareamento do PC REMOTO. Sem ela, só ADMINs já pareados conectam.</summary>
+    public Pairing.PairingWindow? Pairing { get; init; }
     public required AgentSessionOptions Session { get; init; }
     public TimeSpan TlsTimeout { get; init; } = TimeSpan.FromSeconds(10);
     public int MaxConnectionAttemptsPerMinute { get; init; } = 10;
@@ -25,7 +29,7 @@ public sealed record AgentHostOptions
 /// Servidor do Agent: escuta no endereço privado, autentica por mTLS, aceita no máximo uma sessão
 /// e registra tudo em auditoria. Independente de Windows; a interface e a política ficam no app.
 /// </summary>
-public sealed class AgentHost : IAsyncDisposable
+public sealed class AgentHost : IAsyncDisposable, IPairingHandler
 {
     private readonly AgentHostOptions _options;
     private readonly IAgentPolicy _policy;
@@ -33,7 +37,7 @@ public sealed class AgentHost : IAsyncDisposable
     private readonly IDisplaySource? _display;
     private readonly IInputSink? _input;
     private readonly PinnedCertificateValidator _clientValidator;
-    private readonly Dictionary<string, AuthorizedClient> _clients;
+    private readonly IClientStore _clients;
     private readonly ConnectionRateLimiter _rateLimiter;
     private readonly SessionGate _gate = new();
     private readonly SemaphoreSlim _pending;
@@ -47,16 +51,17 @@ public sealed class AgentHost : IAsyncDisposable
     {
         if (TailscaleAddress.IsWildcard(options.Endpoint.Address))
             throw new ArgumentException("O Agent não pode escutar em todas as interfaces (0.0.0.0/::).", nameof(options));
-        if (options.AllowedClients.Count == 0)
-            throw new ArgumentException("Nenhum administrador autorizado.", nameof(options));
 
         _options = options;
         _policy = policy;
         _audit = audit;
         _display = display;
         _input = input;
-        _clientValidator = new PinnedCertificateValidator(options.AllowedClients.Select(c => c.Fingerprint), CertificateUsage.Client);
-        _clients = options.AllowedClients.ToDictionary(c => CertificateFingerprint.Normalize(c.Fingerprint)!, StringComparer.Ordinal);
+        _clients = options.Clients;
+        _clientValidator = new PinnedCertificateValidator(
+            fp => _clients.Find(fp) is not null,
+            () => options.Pairing?.IsOpen == true,
+            CertificateUsage.Client);
         _rateLimiter = new ConnectionRateLimiter(options.MaxConnectionAttemptsPerMinute);
         _pending = new SemaphoreSlim(options.MaxPendingConnections, options.MaxPendingConnections);
     }
@@ -156,11 +161,12 @@ public sealed class AgentHost : IAsyncDisposable
                 return;
             }
 
-            AuthorizedClient who = _clients[channel.RemoteFingerprint];
-            Audit(AuditEventType.AuthenticationSucceeded, remote: remote.Address.ToString(), fingerprint: who.Fingerprint, clientName: who.Name, result: channel.NegotiatedProtocol);
+            AuthorizedClient? who = _clients.Find(channel.RemoteFingerprint);
+            Audit(AuditEventType.AuthenticationSucceeded, remote: remote.Address.ToString(), fingerprint: channel.RemoteFingerprint,
+                clientName: who?.Name ?? "(pareamento)", result: channel.NegotiatedProtocol);
 
             var gatePolicy = new GatedPolicy(_gate, _policy);
-            var session = new AgentSession(channel, who, _options.Session, gatePolicy, _audit, _display, _input);
+            var session = new AgentSession(channel, who, _options.Session, gatePolicy, _audit, _display, _input, this);
             session.Activated += s =>
             {
                 Volatile.Write(ref _current, s);
@@ -190,6 +196,16 @@ public sealed class AgentHost : IAsyncDisposable
             ReleasePending();
             client.Dispose();
         }
+    }
+
+    public Pairing.PairingCheck TryPair(string adminFingerprint, string remoteFingerprint, string adminName, string adminProof)
+    {
+        if (_options.Pairing is null)
+            return new Pairing.PairingCheck(false, null, "Este PC REMOTO não aceita pareamento.");
+        Pairing.PairingCheck check = _options.Pairing.Verify(adminFingerprint, remoteFingerprint, adminProof);
+        if (check.Accepted)
+            _clients.Add(new AuthorizedClient(adminName, adminFingerprint));
+        return check;
     }
 
     public async ValueTask DisposeAsync()
@@ -228,7 +244,7 @@ public sealed class AgentHost : IAsyncDisposable
         public async Task<PolicyDecision> RequestSessionAsync(SessionRequest request, CancellationToken ct)
         {
             if (!gate.TryAcquire())
-                return PolicyDecision.Deny(DenyReason.Busy, "Já existe uma sessão ativa neste computador.");
+                return PolicyDecision.Deny(DenyReason.Busy, "Outro ADMIN já está acessando este PC REMOTO.");
             Acquired = true;
 
             PolicyDecision decision;

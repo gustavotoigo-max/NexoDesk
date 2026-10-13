@@ -52,19 +52,19 @@ public class SecureSessionTests
         Assert.Equal(agent.ServerFingerprint, session.ServerFingerprint);
 
         AgentSession agentSide = await agent.SessionStarted.Task.WaitAsync(Wait);
-        Assert.Equal("Gustavo", agentSide.Client.Name);
+        Assert.Equal("Gustavo", agentSide.ClientName);
 
         if (session.Display is null)
             Assert.Equal(1920, (await display.Task.WaitAsync(Wait)).Width);
         Assert.True((await latency.Task.WaitAsync(Wait)) >= TimeSpan.Zero);
 
         await session.DisconnectAsync();
-        Assert.Equal("Sessão encerrada por você.", await ended.Task.WaitAsync(Wait));
+        Assert.Equal("Acesso encerrado por você.", await ended.Task.WaitAsync(Wait));
 
         (SessionOutcome? outcome, Exception? error) = await agent.Accepted.WaitAsync(Wait);
         Assert.Null(error);
         Assert.True(outcome!.WasAccepted);
-        Assert.Contains("administrador", outcome.Reason);
+        Assert.Contains("ADMIN", outcome.Reason);
 
         Assert.Contains(agent.Audit.Events, e => e.Event == AuditEventType.SessionStarted && e.ClientName == "Gustavo");
         Assert.Contains(agent.Audit.Events, e => e.Event == AuditEventType.SessionEnded);
@@ -177,10 +177,10 @@ public class SecureSessionTests
         agentSide.End(EndReason.LocalUserEnded);
 
         string reason = await ended.Task.WaitAsync(Wait);
-        Assert.Contains("usuário do computador remoto", reason);
+        Assert.Contains("Quem está no PC REMOTO", reason);
 
         (SessionOutcome? outcome, _) = await agent.Accepted.WaitAsync(Wait);
-        Assert.Contains("usuário deste computador", outcome!.Reason);
+        Assert.Contains("quem está neste computador", outcome!.Reason);
     }
 
     [Fact]

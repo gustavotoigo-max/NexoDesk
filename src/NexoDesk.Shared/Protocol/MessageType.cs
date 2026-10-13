@@ -16,11 +16,13 @@ public enum MessageType : ushort
     Pong = 11,
     EndSession = 12,
     Error = 13,
+    PairRequest = 14,
+    PairResult = 15,
 }
 
 public static class MessageTypeExtensions
 {
-    public static bool IsDefined(this MessageType type) => type is >= MessageType.Hello and <= MessageType.Error;
+    public static bool IsDefined(this MessageType type) => type is >= MessageType.Hello and <= MessageType.PairResult;
 
     /// <summary>Maior payload aceito para o tipo. Comprimentos acima disso encerram a sessão.</summary>
     public static int MaxPayload(this MessageType type) => type switch

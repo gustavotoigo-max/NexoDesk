@@ -30,7 +30,8 @@ public sealed record SessionOutcome(bool WasAccepted, string? SessionId, string 
 public sealed class AgentSession
 {
     private readonly SecureChannel _channel;
-    private readonly AuthorizedClient _client;
+    private readonly AuthorizedClient? _client;
+    private readonly IPairingHandler? _pairing;
     private readonly AgentSessionOptions _options;
     private readonly IAgentPolicy _policy;
     private readonly IAuditLog _audit;
@@ -41,12 +42,13 @@ public sealed class AgentSession
 
     public AgentSession(
         SecureChannel channel,
-        AuthorizedClient client,
+        AuthorizedClient? client,
         AgentSessionOptions options,
         IAgentPolicy policy,
         IAuditLog audit,
         IDisplaySource? display = null,
-        IInputSink? input = null)
+        IInputSink? input = null,
+        IPairingHandler? pairing = null)
     {
         _channel = channel;
         _client = client;
@@ -55,13 +57,17 @@ public sealed class AgentSession
         _audit = audit;
         _display = display;
         _input = input;
+        _pairing = pairing;
         StateMachine = new SessionStateMachine(SessionRole.Agent);
         SessionId = Guid.NewGuid().ToString("N")[..12];
     }
 
     public SessionStateMachine StateMachine { get; }
     public string SessionId { get; }
-    public AuthorizedClient Client => _client;
+    /// <summary>Admin pareado. Null quando o certificado ainda não é conhecido (só pode parear).</summary>
+    public AuthorizedClient? Client => _client;
+
+    public string ClientName => _client?.Name ?? "Admin não pareado";
     public SessionMode? Mode { get; private set; }
 
     /// <summary>Disparado quando a sessão entra em Streaming (sessão ativa — mostrar indicador).</summary>
@@ -105,11 +111,24 @@ public sealed class AgentSession
                 }
                 if (env.Type == MessageType.EndSession)
                 {
-                    reason = "Administrador cancelou antes de iniciar.";
+                    reason = "O ADMIN cancelou antes de iniciar.";
                     return Finish(false, reason);
+                }
+                if (env.Type == MessageType.PairRequest)
+                {
+                    reason = await HandlePairingAsync(env, token).ConfigureAwait(false);
+                    return Finish(false, reason, audited: true);
                 }
                 start = ProtocolJson.Deserialize<StartSessionMessage>(env);
                 break;
+            }
+
+            if (_client is null)
+            {
+                const string notPaired = "Este ADMIN não está pareado com este PC REMOTO. Gere um código de pareamento no PC REMOTO.";
+                await _channel.SendAsync(new SessionDeniedMessage(DenyReason.NotAuthorized, notPaired), token).ConfigureAwait(false);
+                Audit(AuditEventType.SessionDenied, result: nameof(DenyReason.NotAuthorized), reason: notPaired);
+                return Finish(false, notPaired, audited: true);
             }
 
             Mode = start.Mode;
@@ -142,7 +161,7 @@ public sealed class AgentSession
         {
             EndReason end = _localEndReason ?? EndReason.ShuttingDown;
             await _channel.TrySendAsync(new EndSessionMessage(end), TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-            reason = end == EndReason.LocalUserEnded ? "Encerrada pelo usuário deste computador." : $"Encerrada localmente ({end}).";
+            reason = end == EndReason.LocalUserEnded ? "Encerrado por quem está neste computador." : $"Encerrado neste computador ({end}).";
             return Finish(accepted, reason);
         }
         catch (ProtocolException ex)
@@ -175,6 +194,31 @@ public sealed class AgentSession
         }
     }
 
+    private async Task<string> HandlePairingAsync(Envelope env, CancellationToken token)
+    {
+        PairRequestMessage request = ProtocolJson.Deserialize<PairRequestMessage>(env);
+        Pairing.PairingCheck check = _pairing is null
+            ? new Pairing.PairingCheck(false, null, "Este PC REMOTO não aceita pareamento agora.")
+            : await Task.Run(() => _pairing.TryPair(_channel.RemoteFingerprint, _channel.LocalFingerprint, request.ClientName, request.Proof), token).ConfigureAwait(false);
+
+        await _channel.SendAsync(new PairResultMessage(
+            check.Accepted, _options.ServerId, _options.DisplayName, check.RemoteProof ?? "", check.Message), token).ConfigureAwait(false);
+
+        _audit.Write(new AuditEvent(DateTimeOffset.UtcNow, check.Accepted ? AuditEventType.Paired : AuditEventType.PairingFailed, _options.ServerId,
+            ClientName: request.ClientName, ClientFingerprint: _channel.RemoteFingerprint, RemoteAddress: _channel.RemoteAddress,
+            Result: check.Accepted ? "Pareado" : "Recusado", Reason: check.Message, AppVersion: _options.AppVersion));
+
+        // Dá tempo de o ADMIN ler a resposta antes de fechar.
+        try
+        {
+            await _channel.ReceiveAsync(TimeSpan.FromSeconds(2), ErrorCode.HandshakeTimeout, token).ConfigureAwait(false);
+        }
+        catch (ProtocolException)
+        {
+        }
+        return check.Accepted ? $"ADMIN \"{request.ClientName}\" pareado." : check.Message;
+    }
+
     private async Task<string> StreamLoopAsync(CancellationToken token)
     {
         bool control = Mode == SessionMode.Control;
@@ -191,7 +235,7 @@ public sealed class AgentSession
                     break;
                 case MessageType.EndSession:
                     EndSessionMessage end = ProtocolJson.Deserialize<EndSessionMessage>(env);
-                    return $"Encerrada pelo administrador ({end.Reason}).";
+                    return $"Encerrado pelo ADMIN ({end.Reason}).";
                 case MessageType.PointerEvent:
                     PointerEventMessage pointer = ProtocolJson.Deserialize<PointerEventMessage>(env);
                     if (control)
@@ -209,9 +253,9 @@ public sealed class AgentSession
     private async Task<PolicyDecision> DecideAsync(SessionRequest request, CancellationToken token)
     {
         if (request.Mode == SessionMode.Control && !_options.Features.Contains(Features.Control))
-            return PolicyDecision.Deny(DenyReason.ModeNotSupported, "Controle remoto ainda não está disponível neste computador. Conecte em modo Visualizar.");
+            return PolicyDecision.Deny(DenyReason.ModeNotSupported, "Controlar ainda não está disponível. Conecte no modo Ver a tela.");
         if (request.Mode == SessionMode.View && !_options.Features.Contains(Features.View))
-            return PolicyDecision.Deny(DenyReason.ModeNotSupported, "Visualização não está disponível neste computador.");
+            return PolicyDecision.Deny(DenyReason.ModeNotSupported, "Ver a tela não está disponível neste PC REMOTO.");
 
         using var policyCts = CancellationTokenSource.CreateLinkedTokenSource(token);
         policyCts.CancelAfter(_options.PolicyTimeout);
@@ -221,7 +265,7 @@ public sealed class AgentSession
         }
         catch (OperationCanceledException) when (!token.IsCancellationRequested)
         {
-            return PolicyDecision.Deny(DenyReason.ConsentTimeout, "Ninguém respondeu ao pedido de acesso no computador remoto.");
+            return PolicyDecision.Deny(DenyReason.ConsentTimeout, "Ninguém respondeu ao pedido de acesso no PC REMOTO.");
         }
     }
 
@@ -241,8 +285,8 @@ public sealed class AgentSession
     private void Audit(AuditEventType type, string? result = null, string? reason = null) =>
         _audit.Write(new AuditEvent(
             DateTimeOffset.UtcNow, type, _options.ServerId,
-            ClientName: _client.Name,
-            ClientFingerprint: _client.Fingerprint,
+            ClientName: _client?.Name,
+            ClientFingerprint: _client?.Fingerprint ?? _channel.RemoteFingerprint,
             RemoteAddress: _channel.RemoteAddress,
             SessionId: SessionId,
             Result: result,

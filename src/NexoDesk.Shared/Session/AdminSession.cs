@@ -115,7 +115,7 @@ public sealed class AdminSession : IAsyncDisposable
                         await channel.SendAsync(new PongMessage(ping.Timestamp), ct).ConfigureAwait(false);
                         break;
                     case MessageType.EndSession:
-                        throw new SessionDeniedException(DenyReason.SessionUnavailable, "O computador remoto encerrou antes de iniciar a sessão.");
+                        throw new SessionDeniedException(DenyReason.SessionUnavailable, "O PC REMOTO encerrou antes de iniciar o acesso.");
                     case MessageType.Error:
                         ThrowIfError(env);
                         break;
@@ -144,7 +144,7 @@ public sealed class AdminSession : IAsyncDisposable
     {
         if (StateMachine.State == SessionState.Streaming)
             await _channel.TrySendAsync(new EndSessionMessage(EndReason.UserRequested), TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-        await CloseAsync("Sessão encerrada por você.").ConfigureAwait(false);
+        await CloseAsync("Acesso encerrado por você.").ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync() => await DisconnectAsync().ConfigureAwait(false);
@@ -189,11 +189,11 @@ public sealed class AdminSession : IAsyncDisposable
                         EndSessionMessage end = ProtocolJson.Deserialize<EndSessionMessage>(env);
                         reason = end.Reason switch
                         {
-                            EndReason.LocalUserEnded => "O usuário do computador remoto encerrou o acesso.",
-                            EndReason.PermissionRevoked => "A permissão de acesso foi revogada no computador remoto.",
-                            EndReason.ShuttingDown => "O NexoDesk Agent foi fechado no computador remoto.",
-                            EndReason.Timeout => "Sessão encerrada por tempo esgotado.",
-                            _ => "Sessão encerrada pelo computador remoto.",
+                            EndReason.LocalUserEnded => "Quem está no PC REMOTO encerrou o acesso.",
+                            EndReason.PermissionRevoked => "Este ADMIN foi removido no PC REMOTO.",
+                            EndReason.ShuttingDown => "O NexoDesk foi fechado no PC REMOTO.",
+                            EndReason.Timeout => "Acesso encerrado por tempo esgotado.",
+                            _ => "Acesso encerrado pelo PC REMOTO.",
                         };
                         return;
                     case MessageType.Error:
@@ -205,17 +205,17 @@ public sealed class AdminSession : IAsyncDisposable
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            reason = "Sessão encerrada por você.";
+            reason = "Acesso encerrado por você.";
         }
         catch (ProtocolException ex)
         {
-            reason = ex.Code == ErrorCode.ConnectionClosed ? "A conexão com o computador remoto caiu." : ex.Message;
+            reason = ex.Code == ErrorCode.ConnectionClosed ? "A conexão com o PC REMOTO caiu." : ex.Message;
             if (ex.Code is not ErrorCode.ConnectionClosed and not ErrorCode.IdleTimeout)
                 await _channel.TrySendAsync(new ErrorMessage(ex.Code, ex.Code.Describe()), TimeSpan.FromSeconds(1)).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException)
         {
-            reason = "A conexão com o computador remoto caiu.";
+            reason = "A conexão com o PC REMOTO caiu.";
         }
         finally
         {
@@ -260,6 +260,6 @@ public sealed class AdminSession : IAsyncDisposable
         if (env.Type != MessageType.Error)
             return;
         ErrorMessage err = ProtocolJson.Deserialize<ErrorMessage>(env);
-        throw new ProtocolException(err.Code, "informado pelo computador remoto");
+        throw new ProtocolException(err.Code, "informado pelo PC REMOTO");
     }
 }

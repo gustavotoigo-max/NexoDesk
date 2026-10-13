@@ -110,7 +110,7 @@ public class MessageFramerTests
 
     [Theory]
     [InlineData((ushort)0)]
-    [InlineData((ushort)14)]
+    [InlineData((ushort)16)]
     [InlineData((ushort)65535)]
     public async Task Read_UnknownType_Throws(ushort type)
     {

@@ -109,7 +109,7 @@ public sealed class SessionStateMachine
         SessionRole.Agent => state switch
         {
             SessionState.Authenticated => type is MessageType.Hello,
-            SessionState.Negotiating => type is MessageType.StartSession or MessageType.Ping or MessageType.EndSession,
+            SessionState.Negotiating => type is MessageType.StartSession or MessageType.PairRequest or MessageType.Ping or MessageType.EndSession,
             SessionState.Streaming => type is MessageType.PointerEvent or MessageType.KeyEvent
                 or MessageType.Ping or MessageType.Pong or MessageType.EndSession,
             _ => false,
@@ -117,7 +117,7 @@ public sealed class SessionStateMachine
         SessionRole.Admin => state switch
         {
             SessionState.Authenticated => type is MessageType.HelloAck or MessageType.Error,
-            SessionState.Negotiating => type is MessageType.SessionAccepted or MessageType.SessionDenied
+            SessionState.Negotiating => type is MessageType.SessionAccepted or MessageType.SessionDenied or MessageType.PairResult
                 or MessageType.Ping or MessageType.Pong or MessageType.EndSession or MessageType.Error,
             SessionState.Streaming => type is MessageType.DisplayInfo or MessageType.VideoFrame
                 or MessageType.Ping or MessageType.Pong or MessageType.EndSession or MessageType.Error,

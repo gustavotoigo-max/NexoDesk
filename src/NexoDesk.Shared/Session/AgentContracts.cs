@@ -52,3 +52,51 @@ public sealed class SessionGate
 
     public bool IsBusy => Volatile.Read(ref _busy) != 0;
 }
+
+/// <summary>Administradores pareados com este PC REMOTO. Pode mudar com o programa aberto.</summary>
+public interface IClientStore
+{
+    AuthorizedClient? Find(string fingerprint);
+
+    /// <summary>Adiciona ou atualiza (mesma impressão → novo nome).</summary>
+    void Add(AuthorizedClient client);
+}
+
+public sealed class InMemoryClientStore : IClientStore
+{
+    private readonly Dictionary<string, AuthorizedClient> _clients = new(StringComparer.Ordinal);
+    private readonly object _gate = new();
+
+    public InMemoryClientStore(IEnumerable<AuthorizedClient>? initial = null)
+    {
+        foreach (AuthorizedClient c in initial ?? [])
+            Add(c);
+    }
+
+    public AuthorizedClient? Find(string fingerprint)
+    {
+        string? key = Security.CertificateFingerprint.Normalize(fingerprint);
+        lock (_gate)
+            return key is not null && _clients.TryGetValue(key, out AuthorizedClient? c) ? c : null;
+    }
+
+    public void Add(AuthorizedClient client)
+    {
+        string key = Security.CertificateFingerprint.Normalize(client.Fingerprint)
+            ?? throw new ArgumentException("Impressão inválida.", nameof(client));
+        lock (_gate)
+            _clients[key] = client with { Fingerprint = key };
+    }
+
+    public int Count
+    {
+        get { lock (_gate) return _clients.Count; }
+    }
+}
+
+/// <summary>Trata um pedido de pareamento já dentro do canal TLS.</summary>
+public interface IPairingHandler
+{
+    /// <summary>Confere a prova; se aceitar, registra o admin e devolve a prova do PC REMOTO.</summary>
+    Pairing.PairingCheck TryPair(string adminFingerprint, string remoteFingerprint, string adminName, string adminProof);
+}

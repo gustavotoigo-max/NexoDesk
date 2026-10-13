@@ -16,6 +16,8 @@ public enum AuditEventType
     SessionEnded,
     ProtocolError,
     ConfigurationError,
+    Paired,
+    PairingFailed,
 }
 
 /// <summary>

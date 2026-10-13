@@ -1,7 +1,0 @@
-<Application x:Class="NexoDesk.Agent.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             ShutdownMode="OnExplicitShutdown">
-    <!-- O Agent continua na área de notificação quando a janela é fechada. Tema instalado em código. -->
-    <Application.Resources />
-</Application>

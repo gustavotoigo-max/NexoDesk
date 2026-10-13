@@ -175,6 +175,34 @@ public sealed record ErrorMessage(ErrorCode Code, string Message) : IControlMess
     }
 }
 
+/// <summary>
+/// Pedido de pareamento (Admin → PC remoto). Proof = HMAC que prova conhecer o código exibido no PC remoto,
+/// ligado às impressões dos dois certificados vistos no TLS. Ver PairingProof.
+/// </summary>
+public sealed record PairRequestMessage(string ClientName, string Proof) : IControlMessage
+{
+    public void Validate()
+    {
+        Check.Id(ClientName, nameof(ClientName));
+        Check.Hex(Proof, nameof(Proof));
+    }
+}
+
+/// <summary>Resposta do pareamento. Se aceito, Proof prova que o PC remoto também conhece o código.</summary>
+public sealed record PairResultMessage(bool Accepted, string ServerId, string DisplayName, string Proof, string Message) : IControlMessage
+{
+    public void Validate()
+    {
+        Check.Id(ServerId, nameof(ServerId));
+        Check.Text(DisplayName, nameof(DisplayName), ProtocolConstants.MaxIdLength);
+        Check.Text(Message, nameof(Message), ProtocolConstants.MaxMessageTextLength);
+        if (Accepted)
+            Check.Hex(Proof, nameof(Proof));
+        else
+            Check.Text(Proof, nameof(Proof), 64);
+    }
+}
+
 internal static class Check
 {
     public static void Version(int version)
@@ -211,6 +239,12 @@ internal static class Check
             throw new ProtocolException(ErrorCode.MalformedPayload, $"{field} com itens demais");
         foreach (string v in values)
             Text(v, field, 64);
+    }
+
+    public static void Hex(string? value, string field)
+    {
+        if (value is null || value.Length != 64 || !value.All(Uri.IsHexDigit))
+            throw new ProtocolException(ErrorCode.MalformedPayload, $"{field} inválido");
     }
 
     public static void Enum<T>(T value, string field) where T : struct, System.Enum
