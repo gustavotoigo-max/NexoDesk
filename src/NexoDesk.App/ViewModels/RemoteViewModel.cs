@@ -34,6 +34,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
     private readonly AppState _state;
     private readonly Dispatcher _dispatcher;
     private readonly SessionLockMonitor _lock = new();
+    private readonly GdiScreenCapture _capture;
     private readonly PairingWindow _pairing = new();
     private readonly DispatcherTimer _pairingTimer;
     private AgentHost? _host;
@@ -51,6 +52,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
     {
         _state = state;
         _dispatcher = dispatcher;
+        _capture = new GdiScreenCapture(() => _state.Config.Remote.MaxFps, () => _state.Config.Remote.JpegQuality);
         _pairing.Changed += () => _dispatcher.InvokeAsync(OnPairingChanged);
         _pairingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _pairingTimer.Tick += (_, _) => UpdatePairingRemaining();
@@ -262,7 +264,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
                 Features = [Features.View],
                 PolicyTimeout = consentTimeout + TimeSpan.FromSeconds(5),
             },
-        }, new ConsentPolicy(_dispatcher, _lock, () => _state.Config.Remote.UnattendedAccessEnabled, consentTimeout), audit, new PrimaryDisplaySource());
+        }, new ConsentPolicy(_dispatcher, _lock, () => _state.Config.Remote.UnattendedAccessEnabled, consentTimeout), audit, _capture, input: null, frames: _capture);
 
         _host.SessionActivated += session => _dispatcher.InvokeAsync(() =>
         {
@@ -313,6 +315,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await StopAsync();
+        _capture.Dispose();
         _lock.Dispose();
     }
 

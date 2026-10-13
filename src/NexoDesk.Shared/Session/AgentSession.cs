@@ -37,6 +37,7 @@ public sealed class AgentSession
     private readonly IAuditLog _audit;
     private readonly IDisplaySource? _display;
     private readonly IInputSink? _input;
+    private readonly IFrameSource? _frames;
     private readonly CancellationTokenSource _endCts = new();
     private EndReason? _localEndReason;
 
@@ -48,7 +49,8 @@ public sealed class AgentSession
         IAuditLog audit,
         IDisplaySource? display = null,
         IInputSink? input = null,
-        IPairingHandler? pairing = null)
+        IPairingHandler? pairing = null,
+        IFrameSource? frames = null)
     {
         _channel = channel;
         _client = client;
@@ -57,6 +59,7 @@ public sealed class AgentSession
         _audit = audit;
         _display = display;
         _input = input;
+        _frames = frames;
         _pairing = pairing;
         StateMachine = new SessionStateMachine(SessionRole.Agent);
         SessionId = Guid.NewGuid().ToString("N")[..12];
@@ -222,31 +225,67 @@ public sealed class AgentSession
     private async Task<string> StreamLoopAsync(CancellationToken token)
     {
         bool control = Mode == SessionMode.Control;
-        while (true)
+        using var loopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        // Envia os frames da tela em paralelo com a recepção de ping/entrada.
+        Task framePump = _frames is not null ? FramePumpAsync(loopCts.Token) : Task.CompletedTask;
+        try
         {
-            Envelope env = await ReceiveAsync(_options.IdleTimeout, ErrorCode.IdleTimeout, token).ConfigureAwait(false);
-            switch (env.Type)
+            while (true)
             {
-                case MessageType.Ping:
-                    await ReplyPongAsync(env, token).ConfigureAwait(false);
-                    break;
-                case MessageType.Pong:
-                    ProtocolJson.Deserialize<PongMessage>(env);
-                    break;
-                case MessageType.EndSession:
-                    EndSessionMessage end = ProtocolJson.Deserialize<EndSessionMessage>(env);
-                    return $"Encerrado pelo ADMIN ({end.Reason}).";
-                case MessageType.PointerEvent:
-                    PointerEventMessage pointer = ProtocolJson.Deserialize<PointerEventMessage>(env);
-                    if (control)
-                        _input?.Apply(pointer);
-                    break;
-                case MessageType.KeyEvent:
-                    KeyEventMessage key = ProtocolJson.Deserialize<KeyEventMessage>(env);
-                    if (control)
-                        _input?.Apply(key);
-                    break;
+                Envelope env = await ReceiveAsync(_options.IdleTimeout, ErrorCode.IdleTimeout, token).ConfigureAwait(false);
+                switch (env.Type)
+                {
+                    case MessageType.Ping:
+                        await ReplyPongAsync(env, token).ConfigureAwait(false);
+                        break;
+                    case MessageType.Pong:
+                        ProtocolJson.Deserialize<PongMessage>(env);
+                        break;
+                    case MessageType.EndSession:
+                        EndSessionMessage end = ProtocolJson.Deserialize<EndSessionMessage>(env);
+                        return $"Encerrado pelo ADMIN ({end.Reason}).";
+                    case MessageType.PointerEvent:
+                        PointerEventMessage pointer = ProtocolJson.Deserialize<PointerEventMessage>(env);
+                        if (control)
+                            _input?.Apply(pointer);
+                        break;
+                    case MessageType.KeyEvent:
+                        KeyEventMessage key = ProtocolJson.Deserialize<KeyEventMessage>(env);
+                        if (control)
+                            _input?.Apply(key);
+                        break;
+                }
             }
+        }
+        finally
+        {
+            loopCts.Cancel();
+            try { await framePump.ConfigureAwait(false); }
+            catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException) { }
+            _frames?.Reset();
+        }
+    }
+
+    private async Task FramePumpAsync(CancellationToken token)
+    {
+        uint index = 0;
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                VideoFrame? frame = await _frames!.NextFrameAsync(index, token).ConfigureAwait(false);
+                if (frame is null)
+                    continue;
+                await _channel.SendRawAsync(MessageType.VideoFrame, frame.Encode(), token).ConfigureAwait(false);
+                index++;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or ProtocolException or InvalidOperationException)
+        {
+            // A conexão caiu: o laço de recepção encerra a sessão.
         }
     }
 

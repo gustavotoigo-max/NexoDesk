@@ -26,7 +26,7 @@ Passo a passo: **[docs/tutorial.md](docs/tutorial.md)**. Resumo:
 ```powershell
 dotnet test NexoDesk.sln -c Release
 dotnet publish src\NexoDesk.App -c Release -r win-x64 --self-contained true -o publish\app
-iscc /DAppVersion=0.3.0 installer\NexoDesk.iss
+iscc /DAppVersion=0.4.0 installer\NexoDesk.iss
 ```
 
 O GitHub Actions compila, testa e gera o instalador a cada envio para a `main`, e publica em Releases na versão definida em `Directory.Build.props`.

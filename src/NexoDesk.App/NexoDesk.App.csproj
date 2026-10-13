@@ -13,6 +13,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\nexodesk.ico</ApplicationIcon>
     <AssemblyTitle>NexoDesk</AssemblyTitle>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!-- WPF e Windows Forms juntos: evita ambiguidades (Application, MessageBox, Button…). Tipos WinForms vão qualificados. -->

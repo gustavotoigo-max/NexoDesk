@@ -31,6 +31,19 @@ public interface IDisplaySource
     DisplayInfoMessage GetDisplayInfo();
 }
 
+/// <summary>
+/// Produz os frames da tela do PC REMOTO. Implementado no app (Windows).
+/// NextFrameAsync deve respeitar o intervalo de FPS internamente (esperar antes de capturar),
+/// e pode devolver null quando a tela não mudou desde o último frame.
+/// </summary>
+public interface IFrameSource
+{
+    Task<VideoFrame?> NextFrameAsync(uint frameIndex, CancellationToken ct);
+
+    /// <summary>Libera recursos de captura ao fim da sessão.</summary>
+    void Reset();
+}
+
 /// <summary>Aplica entrada remota. Implementado no Agent a partir do M5 (SendInput).</summary>
 public interface IInputSink
 {

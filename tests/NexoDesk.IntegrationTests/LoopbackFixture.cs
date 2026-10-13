@@ -66,13 +66,15 @@ internal sealed class LoopbackAgent : IAsyncDisposable
         IEnumerable<AuthorizedClient> allowed,
         IAgentPolicy? policy = null,
         string[]? features = null,
-        RecordingInput? input = null)
+        RecordingInput? input = null,
+        IFrameSource? frames = null)
     {
         ServerCertificate = serverCert;
         Allowed = allowed.ToList();
         Policy = policy ?? ScriptedPolicy.AllowAll;
         Features = features ?? [NexoDesk.Shared.Messages.Features.View, NexoDesk.Shared.Messages.Features.Control];
         Input = input;
+        Frames = frames;
         _listener.Start();
         Accepted = Task.Run(AcceptOneAsync);
     }
@@ -82,6 +84,7 @@ internal sealed class LoopbackAgent : IAsyncDisposable
     public IAgentPolicy Policy { get; }
     public string[] Features { get; }
     public RecordingInput? Input { get; }
+    public IFrameSource? Frames { get; }
     public MemoryAuditLog Audit { get; } = new();
     public int Port => ((IPEndPoint)_listener.LocalEndpoint).Port;
     public string ServerFingerprint => CertificateFingerprint.Sha256(ServerCertificate);
@@ -115,7 +118,7 @@ internal sealed class LoopbackAgent : IAsyncDisposable
             HandshakeTimeout = TimeSpan.FromSeconds(5),
             IdleTimeout = TimeSpan.FromSeconds(5),
             PolicyTimeout = TimeSpan.FromSeconds(2),
-        }, Policy, Audit, new FixedDisplay(), Input);
+        }, Policy, Audit, new FixedDisplay(), Input, frames: Frames);
         session.Activated += s => SessionStarted.TrySetResult(s);
         SessionOutcome outcome = await session.RunAsync(_cts.Token);
         return (outcome, null);

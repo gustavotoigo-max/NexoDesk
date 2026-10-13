@@ -76,7 +76,7 @@ As mensagens na tela dizem o motivo e o que fazer. Tabela completa em [troublesh
 ```powershell
 dotnet test NexoDesk.sln -c Release
 dotnet publish src\NexoDesk.App -c Release -r win-x64 --self-contained true -o publish\app
-iscc /DAppVersion=0.3.0 installer\NexoDesk.iss     # gera artifacts\NexoDesk-Setup-0.3.0.exe
+iscc /DAppVersion=0.4.0 installer\NexoDesk.iss     # gera artifacts\NexoDesk-Setup-0.3.0.exe
 ```
 
 O GitHub Actions faz isso a cada envio para a `main` e publica o instalador em **Releases**.
