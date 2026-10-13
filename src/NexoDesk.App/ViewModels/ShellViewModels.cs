@@ -101,7 +101,7 @@ public sealed class ShellViewModel : ObservableObject
 {
     private readonly AppState _state;
 
-    public ShellViewModel(AppState state, object content, Action switchRole)
+    public ShellViewModel(AppState state, object content, Action switchRole, Action requestExit)
     {
         _state = state;
         Content = content;
@@ -110,7 +110,7 @@ public sealed class ShellViewModel : ObservableObject
             System.IO.Directory.CreateDirectory(AppPaths.LogDirectory);
             AppPaths.Open(AppPaths.LogDirectory);
         });
-        Update = new UpdateViewModel();
+        Update = new UpdateViewModel(requestExit);
         Settings = new SettingsViewModel(state, switchRole, Update);
         _state.Changed += () => OnPropertyChanged(nameof(DeviceName));
         _ = Update.CheckAsync();
@@ -131,13 +131,15 @@ public sealed class ShellViewModel : ObservableObject
 /// <summary>Atualização pela interface: consulta o GitHub e, se houver versão nova, baixa e instala.</summary>
 public sealed class UpdateViewModel : ObservableObject
 {
+    private readonly Action _requestExit;
     private UpdateInfo? _info;
     private string _status = "";
     private bool _busy;
     private bool _checking;
 
-    public UpdateViewModel()
+    public UpdateViewModel(Action requestExit)
     {
+        _requestExit = requestExit;
         CheckCommand = new AsyncRelayCommand(CheckAsync, () => !_busy && !_checking);
         InstallCommand = new AsyncRelayCommand(InstallAsync, () => Available && !_busy);
     }
@@ -186,9 +188,19 @@ public sealed class UpdateViewModel : ObservableObject
         {
             var progress = new Progress<double>(p => Status = $"Baixando a atualização… {p:P0}");
             bool ok = await UpdateService.DownloadAndRunAsync(_info, progress);
-            Status = ok
-                ? "Abrindo o instalador… O NexoDesk será fechado para concluir."
-                : "Não foi possível baixar a atualização. Tente mais tarde.";
+            if (ok)
+            {
+                // Fecha o NexoDesk para o instalador conseguir substituir os arquivos.
+                // Sem isso, o instalador tenta fechar sozinho, mas no PC REMOTO o X só esconde
+                // para a bandeja — então o arquivo fica em uso e o processo fica preso.
+                Status = "Instalador aberto. Fechando o NexoDesk para concluir a atualização…";
+                await Task.Delay(1500);
+                _requestExit();
+            }
+            else
+            {
+                Status = "Não foi possível baixar a atualização. Tente mais tarde.";
+            }
         }
         finally
         {

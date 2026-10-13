@@ -35,10 +35,22 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        _singleInstance = new Mutex(initiallyOwned: true, MutexName, out bool isFirst);
-        if (!isFirst)
+        // Instância única por posse ativa do mutex (não por "quem criou o objeto"):
+        // se uma cópia anterior foi encerrada pelo gerenciador sem liberar, o mutex fica
+        // "abandonado" — nós assumimos a posse e abrimos normalmente, em vez de travar.
+        _singleInstance = new Mutex(initiallyOwned: false, MutexName);
+        bool owned;
+        try
         {
-            // Já aberto: pede para a cópia em execução aparecer e sai.
+            owned = _singleInstance.WaitOne(TimeSpan.Zero);
+        }
+        catch (AbandonedMutexException)
+        {
+            owned = true; // dono anterior morreu sem liberar; a posse é nossa.
+        }
+        if (!owned)
+        {
+            // Uma cópia viva está rodando: pede para ela aparecer e sai.
             try
             {
                 using EventWaitHandle show = EventWaitHandle.OpenExisting(ShowEventName);
@@ -89,7 +101,7 @@ public partial class App : Application
         if (state.Config.Role == DeviceRole.Remote)
         {
             _remote = new RemoteViewModel(state, Dispatcher);
-            _window = new MainWindow(new ShellViewModel(state, _remote, SwitchRole));
+            _window = new MainWindow(new ShellViewModel(state, _remote, SwitchRole, () => _ = ExitAsync()));
             _window.Closing += OnMainWindowClosing;
             _tray = new TrayIcon(ShowWindow, () => _remote.EndSession(), () => _ = ExitAsync());
             _remote.StatusChanged += () => _tray.Update(_remote.IsReady, _remote.HasSession, _remote.SessionAdmin);
@@ -109,7 +121,7 @@ public partial class App : Application
         {
             Autostart.Set(false);
             _admin = new AdminViewModel(state);
-            _window = new MainWindow(new ShellViewModel(state, _admin, SwitchRole));
+            _window = new MainWindow(new ShellViewModel(state, _admin, SwitchRole, () => _ = ExitAsync()));
             _window.Closing += OnMainWindowClosing;
             ShowWindow();
             _admin.Initialize();
@@ -220,20 +232,35 @@ public partial class App : Application
         }
 
         _exiting = true;
+
+        // Libera a thread que escuta pedidos de "aparecer" para ela não ficar bloqueada.
+        try { _showSignal?.Set(); } catch (ObjectDisposedException) { }
+
         foreach (SessionWindow w in Windows.OfType<SessionWindow>().ToList())
             w.Close();
         if (_remote is not null)
-            await _remote.DisposeAsync();
+        {
+            // Encerrar a rede/captura é melhor esforço e tem teto de tempo próprio;
+            // uma falha aqui não pode impedir o processo de morrer.
+            try { await _remote.DisposeAsync(); }
+            catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException) { }
+        }
         _indicator?.CloseForSessionEnd();
         _tray?.Dispose();
         _window?.Close();
 
+        // Libera o mutex ANTES de relançar, para a nova cópia assumir a posse sem corrida.
+        ReleaseSingleInstance();
+        try { _showSignal?.Dispose(); } catch (ObjectDisposedException) { }
+
         if (restart)
-        {
-            ReleaseSingleInstance();
             Process.Start(new ProcessStartInfo(AppPaths.ExecutablePath) { UseShellExecute = true });
-        }
-        Shutdown();
+
+        // Encerramento determinístico: uma leitura nativa pendente (TLS/GDI) ou a janela
+        // oculta do ícone da bandeja pode manter o processo vivo depois do Shutdown(),
+        // deixando um processo "fantasma" que segura o mutex e impede reabrir. Environment.Exit
+        // garante o fim do processo em ambas as máquinas.
+        Environment.Exit(0);
     }
 
     private void ListenForShowRequests()
