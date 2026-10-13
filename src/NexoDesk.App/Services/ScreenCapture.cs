@@ -163,19 +163,19 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
             foreach (ScreenTile t in changed)
             {
                 using Bitmap crop = _bitmap!.Clone(new Rectangle(t.X, t.Y, t.Width, t.Height), PixelFormat.Format24bppRgb);
-                byte[] data;
+                byte[] encoded;
                 if (lossless)
                 {
                     byte[] png = EncodePng(crop);
                     // Bloco "chapado" (texto/UI) comprime bem em PNG e fica perfeito; bloco fotográfico
                     // incha em PNG, então nesse caso usa JPEG alto (continua nítido, bem menor).
-                    data = png.Length <= LosslessTileCap ? png : Encode(crop, 92);
+                    encoded = png.Length <= LosslessTileCap ? png : Encode(crop, 92);
                 }
                 else
                 {
-                    data = Encode(crop, quality);
+                    encoded = Encode(crop, quality);
                 }
-                tiles.Add(t with { Jpeg = data });
+                tiles.Add(t with { Jpeg = encoded });
             }
 
             // Se o quadro ficou grande demais (ex.: tela inteira mudou em alta qualidade), ainda assim
