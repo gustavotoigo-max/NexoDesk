@@ -54,7 +54,7 @@ public sealed class MainViewModel : ObservableObject
         ClearLogCommand = new RelayCommand(() => Log.Clear(), () => Log.Count > 0);
         SetThemeCommand = new RelayCommand(p =>
         {
-            if (p is string s && Enum.TryParse(s, out ThemeMode mode))
+            if (p is string s && Enum.TryParse(s, out NxThemeMode mode))
             {
                 ThemeManager.Apply(mode);
                 OnPropertyChanged(nameof(ThemeAuto));
@@ -80,9 +80,9 @@ public sealed class MainViewModel : ObservableObject
     public string Version => App.Version;
     public string ConfigPath => AdminPaths.ConfigFile;
 
-    public bool ThemeAuto => ThemeManager.Mode == ThemeMode.Auto;
-    public bool ThemeLight => ThemeManager.Mode == ThemeMode.Light;
-    public bool ThemeDark => ThemeManager.Mode == ThemeMode.Dark;
+    public bool ThemeAuto => ThemeManager.Mode == NxThemeMode.Auto;
+    public bool ThemeLight => ThemeManager.Mode == NxThemeMode.Light;
+    public bool ThemeDark => ThemeManager.Mode == NxThemeMode.Dark;
 
     public bool HasMachines => Machines.Count > 0;
 

@@ -5,7 +5,7 @@ using Microsoft.Win32;
 
 namespace NexoDesk.Ui;
 
-public enum ThemeMode
+public enum NxThemeMode
 {
     /// <summary>Segue o tema de aplicativos do Windows.</summary>
     Auto,
@@ -23,7 +23,7 @@ public static class ThemeManager
     private static ResourceDictionary? _themeSlot;
     private static bool _listening;
 
-    public static ThemeMode Mode { get; private set; } = ThemeMode.Auto;
+    public static NxThemeMode Mode { get; private set; } = NxThemeMode.Auto;
 
     /// <summary>Tema efetivo depois de resolver "Automático".</summary>
     public static bool IsDark { get; private set; }
@@ -50,19 +50,19 @@ public static class ThemeManager
             _listening = true;
             SystemEvents.UserPreferenceChanged += (_, e) =>
             {
-                if (e.Category == UserPreferenceCategory.General && Mode == ThemeMode.Auto)
-                    app.Dispatcher.InvokeAsync(() => Apply(ThemeMode.Auto, save: false));
+                if (e.Category == UserPreferenceCategory.General && Mode == NxThemeMode.Auto)
+                    app.Dispatcher.InvokeAsync(() => Apply(NxThemeMode.Auto, save: false));
             };
         }
     }
 
-    public static void Apply(ThemeMode mode, bool save = true)
+    public static void Apply(NxThemeMode mode, bool save = true)
     {
         Mode = mode;
         bool dark = mode switch
         {
-            ThemeMode.Dark => true,
-            ThemeMode.Light => false,
+            NxThemeMode.Dark => true,
+            NxThemeMode.Light => false,
             _ => WindowsPrefersDark(),
         };
 
@@ -98,24 +98,24 @@ public static class ThemeManager
         }
     }
 
-    private static ThemeMode LoadSavedMode()
+    private static NxThemeMode LoadSavedMode()
     {
         try
         {
             if (!File.Exists(SettingsPath))
-                return ThemeMode.Auto;
+                return NxThemeMode.Auto;
             using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(SettingsPath));
             if (doc.RootElement.TryGetProperty("theme", out JsonElement theme)
-                && Enum.TryParse(theme.GetString(), ignoreCase: true, out ThemeMode mode))
+                && Enum.TryParse(theme.GetString(), ignoreCase: true, out NxThemeMode mode))
                 return mode;
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
         }
-        return ThemeMode.Auto;
+        return NxThemeMode.Auto;
     }
 
-    private static void SaveMode(ThemeMode mode)
+    private static void SaveMode(NxThemeMode mode)
     {
         try
         {

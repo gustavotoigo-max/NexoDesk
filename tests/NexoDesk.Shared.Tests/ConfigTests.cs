@@ -20,8 +20,8 @@ public class ConfigTests
     [Fact]
     public void Agent_Valid_HasNoProblems()
     {
-        Assert.Equal(0, ValidAgent().Validate().Count);
-        Assert.Equal(0, (ValidAgent() with { ListenAddress = "auto" }).Validate().Count);
+        Assert.Empty(ValidAgent().Validate());
+        Assert.Empty((ValidAgent() with { ListenAddress = "auto" }).Validate());
     }
 
     [Fact]
@@ -37,14 +37,14 @@ public class ConfigTests
     [InlineData("nao-e-ip")]
     public void Agent_RejectsUnsafeListenAddress(string address)
     {
-        Assert.NotEqual(0, (ValidAgent() with { ListenAddress = address }).Validate().Count);
+        Assert.NotEmpty((ValidAgent() with { ListenAddress = address }).Validate());
     }
 
     [Fact]
     public void Agent_LabMode_AllowsPrivateAddress_ButNeverWildcard()
     {
-        Assert.Equal(0, (ValidAgent() with { ListenAddress = "192.168.0.10", AllowNonTailscaleAddress = true }).Validate().Count);
-        Assert.NotEqual(0, (ValidAgent() with { ListenAddress = "0.0.0.0", AllowNonTailscaleAddress = true }).Validate().Count);
+        Assert.Empty((ValidAgent() with { ListenAddress = "192.168.0.10", AllowNonTailscaleAddress = true }).Validate());
+        Assert.NotEmpty((ValidAgent() with { ListenAddress = "0.0.0.0", AllowNonTailscaleAddress = true }).Validate());
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class ConfigTests
     [Fact]
     public void Admin_Valid_HasNoProblems()
     {
-        Assert.Equal(0, ValidAdmin().Validate().Count);
+        Assert.Empty(ValidAdmin().Validate());
     }
 
     [Fact]
