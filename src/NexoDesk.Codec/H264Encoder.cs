@@ -1,6 +1,6 @@
-using System.Linq;
 using System.Runtime.InteropServices;
 using NexoDesk.Shared.Messages;
+using SharpGen.Runtime;
 using Vortice.MediaFoundation;
 using Vortice.Multimedia;
 using static Vortice.MediaFoundation.MediaFactory;
@@ -47,18 +47,15 @@ public sealed class H264Encoder : IDisposable
         {
             MFStartup();
 
-            // Perfil H.264 Main (77); modo progressivo; flags SyncMFT(0x1)|SortAndFilter(0x40).
+            // Perfil H.264 Main (77); modo progressivo.
             const int ProfileMain = 77;
             const int Progressive = 2; // MFVideoInterlace_Progressive
-            const uint EnumFlags = 0x1u | 0x40u;
 
-            var outputInfo = new RegisterTypeInfo { GuidMajorType = MediaTypeGuids.Video, GuidSubtype = VideoFormatGuids.H264 };
-            using IMFActivateCollection activates = MFTEnumEx(TransformCategoryGuids.VideoEncoder, EnumFlags, null, outputInfo);
-            IMFActivate? activate = activates.FirstOrDefault();
-            if (activate is null)
+            // Cria o encoder H.264 do Windows diretamente pelo CLSID (evita enumeração de MFTs).
+            int hr = CoCreateInstance(ClsidH264Encoder, IntPtr.Zero, CLSCTX_INPROC_SERVER, IidImfTransform, out IntPtr ptr);
+            if (hr < 0 || ptr == IntPtr.Zero)
                 return null;
-
-            var mft = activate.ActivateObject<IMFTransform>();
+            var mft = new IMFTransform(ptr);
 
             // Saída (H.264) primeiro, depois entrada (NV12).
             using (IMFMediaType outType = MFCreateMediaType())
@@ -132,22 +129,19 @@ public sealed class H264Encoder : IDisposable
 
     private H264Frame? DrainOutput(uint frameIndex)
     {
-        var buffers = new TOutputDataBuffer[1];
-        buffers[0].StreamID = 0;
-
         IMFSample outSample = CreateEmptyOutputSample();
-        buffers[0].Sample = outSample;
+        var buffer0 = new OutputDataBuffer { StreamID = 0, Sample = outSample };
         try
         {
-            Result res = _mft.ProcessOutput(0, 1, buffers, out _);
+            Result res = _mft.ProcessOutput(0, 1, ref buffer0, out _);
             if (res.Failure)
                 return null; // MF_E_TRANSFORM_NEED_MORE_INPUT: sem saída ainda neste quadro.
 
-            IMFSample produced = buffers[0].Sample;
+            IMFSample produced = buffer0.Sample;
             bool key = produced.GetUInt32(SampleAttributeKeys.CleanPoint) != 0;
 
             using IMFMediaBuffer buffer = produced.ConvertToContiguousBuffer();
-            IntPtr ptr = buffer.Lock(out _, out int current);
+            buffer.Lock(out IntPtr ptr, out _, out int current);
             try
             {
                 byte[] data = new byte[current];
@@ -169,7 +163,7 @@ public sealed class H264Encoder : IDisposable
     {
         IMFSample sample = MFCreateSample();
         IMFMediaBuffer buffer = MFCreateMemoryBuffer(data.Length);
-        IntPtr ptr = buffer.Lock(out _, out _);
+        buffer.Lock(out IntPtr ptr, out _, out _);
         Marshal.Copy(data, 0, ptr, data.Length);
         buffer.Unlock();
         buffer.CurrentLength = data.Length;
@@ -192,6 +186,13 @@ public sealed class H264Encoder : IDisposable
     }
 
     private static long Pack(int high, int low) => ((long)high << 32) | (uint)low;
+
+    private const int CLSCTX_INPROC_SERVER = 1;
+    private static readonly Guid ClsidH264Encoder = new("6CA50344-051A-4DED-9779-A43305165E35");
+    private static readonly Guid IidImfTransform = new("BF94C121-5B05-4E6F-8000-BA598961414D");
+
+    [DllImport("ole32.dll")]
+    private static extern int CoCreateInstance(in Guid rclsid, IntPtr pUnkOuter, int dwClsContext, in Guid riid, out IntPtr ppv);
 
     public void Dispose()
     {
