@@ -39,7 +39,7 @@
 
     <Grid Background="#05070C">
         <!-- Vídeo remoto: ajustado à área útil, sem distorção -->
-        <Image Source="{Binding Frame}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True" />
+        <Image x:Name="RemoteImage" Source="{Binding Frame}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True" Focusable="True" />
 
         <!-- Conectado, ainda sem vídeo (a captura chega no M3) -->
         <Border HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Padding="28,26">

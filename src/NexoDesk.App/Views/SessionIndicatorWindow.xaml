@@ -55,7 +55,8 @@
                     <Run Text="·" Foreground="{DynamicResource Nx.OnNavyMuted}" />
                     <Run x:Name="ModeRun" Text="" Foreground="{DynamicResource Nx.OnNavyMuted}" />
                 </TextBlock>
-                <Button x:Name="EndButton" Style="{DynamicResource Nx.Button.DangerSolid.Small}" Content="Encerrar acesso" Margin="16,0,0,0" Click="OnEnd" />
+                <Button x:Name="EndButton" Style="{DynamicResource Nx.Button.DangerSolid.Small}" Content="Encerrar acesso" Margin="16,0,8,0" Click="OnEnd" />
+                <Button x:Name="HideButton" Style="{DynamicResource Nx.Button.Navy}" Content="Esconder" Click="OnHide" ToolTip="Esconde este aviso. O acesso continua ativo." />
             </StackPanel>
             <Rectangle Grid.Row="1" Fill="{DynamicResource Nx.AccentGradient}" RadiusX="1" RadiusY="1" Margin="10,0,10,0" />
         </Grid>

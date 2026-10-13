@@ -110,12 +110,15 @@ public sealed class ShellViewModel : ObservableObject
             System.IO.Directory.CreateDirectory(AppPaths.LogDirectory);
             AppPaths.Open(AppPaths.LogDirectory);
         });
-        Settings = new SettingsViewModel(state, switchRole);
+        Update = new UpdateViewModel();
+        Settings = new SettingsViewModel(state, switchRole, Update);
         _state.Changed += () => OnPropertyChanged(nameof(DeviceName));
+        _ = Update.CheckAsync();
     }
 
     public object Content { get; }
     public SettingsViewModel Settings { get; }
+    public UpdateViewModel Update { get; }
     public ICommand OpenLogsCommand { get; }
 
     public bool IsAdmin => _state.Config.Role == DeviceRole.Admin;
@@ -125,16 +128,86 @@ public sealed class ShellViewModel : ObservableObject
     public string Version => AppInfo.Version;
 }
 
+/// <summary>Atualização pela interface: consulta o GitHub e, se houver versão nova, baixa e instala.</summary>
+public sealed class UpdateViewModel : ObservableObject
+{
+    private UpdateInfo? _info;
+    private string _status = "";
+    private bool _busy;
+    private bool _checking;
+
+    public UpdateViewModel()
+    {
+        CheckCommand = new AsyncRelayCommand(CheckAsync, () => !_busy && !_checking);
+        InstallCommand = new AsyncRelayCommand(InstallAsync, () => Available && !_busy);
+    }
+
+    public ICommand CheckCommand { get; }
+    public ICommand InstallCommand { get; }
+
+    public bool Available => _info is not null;
+    public string AvailableText => _info is null ? "" : $"Atualização disponível: versão {_info.Version}";
+    public string Status { get => _status; private set => Set(ref _status, value); }
+
+    public bool Busy
+    {
+        get => _busy;
+        private set { if (Set(ref _busy, value)) CommandManager.InvalidateRequerySuggested(); }
+    }
+
+    public async Task CheckAsync()
+    {
+        if (_checking)
+            return;
+        _checking = true;
+        CommandManager.InvalidateRequerySuggested();
+        Status = "Procurando atualizações…";
+        try
+        {
+            _info = await UpdateService.CheckAsync();
+            OnPropertyChanged(nameof(Available));
+            OnPropertyChanged(nameof(AvailableText));
+            Status = _info is null ? "Você está na versão mais recente." : AvailableText;
+        }
+        finally
+        {
+            _checking = false;
+            CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    private async Task InstallAsync()
+    {
+        if (_info is null)
+            return;
+        Busy = true;
+        Status = "Baixando a atualização…";
+        try
+        {
+            var progress = new Progress<double>(p => Status = $"Baixando a atualização… {p:P0}");
+            bool ok = await UpdateService.DownloadAndRunAsync(_info, progress);
+            Status = ok
+                ? "Abrindo o instalador… O NexoDesk será fechado para concluir."
+                : "Não foi possível baixar a atualização. Tente mais tarde.";
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+}
+
 public sealed class SettingsViewModel : ObservableObject
 {
     private readonly AppState _state;
     private readonly Action _switchRole;
     private string _deviceName;
 
-    public SettingsViewModel(AppState state, Action switchRole)
+    public SettingsViewModel(AppState state, Action switchRole, UpdateViewModel update)
     {
         _state = state;
         _switchRole = switchRole;
+        Update = update;
         _deviceName = state.Config.DeviceName;
         SaveNameCommand = new RelayCommand(SaveName, () => !string.IsNullOrWhiteSpace(DeviceName) && DeviceName.Trim() != _state.Config.DeviceName);
         SwitchRoleCommand = new RelayCommand(() => _switchRole());
@@ -150,6 +223,8 @@ public sealed class SettingsViewModel : ObservableObject
         });
         OpenDataFolderCommand = new RelayCommand(() => AppPaths.Open(AppPaths.DataDirectory));
     }
+
+    public UpdateViewModel Update { get; }
 
     public ICommand SaveNameCommand { get; }
     public ICommand SwitchRoleCommand { get; }

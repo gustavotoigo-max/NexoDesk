@@ -74,6 +74,36 @@ public sealed class SessionViewModel : ObservableObject
     public ICommand ReconnectCommand { get; }
     public ICommand CloseCommand { get; }
 
+    /// <summary>Verdadeiro quando a sessão é de controle e está ativa (envia mouse/teclado).</summary>
+    public bool CanControl => _session.CanControl && !IsEnded;
+
+    public int RemoteWidth => _session.Display?.Width ?? 1920;
+    public int RemoteHeight => _session.Display?.Height ?? 1080;
+
+    /// <summary>Envia um evento de ponteiro (coordenadas já normalizadas 0..1). Não bloqueia a interface.</summary>
+    public void SendPointer(double nx, double ny, PointerButton button, PointerAction action, int wheel = 0)
+    {
+        if (!CanControl)
+            return;
+        double x = Math.Clamp(nx, 0, 1);
+        double y = Math.Clamp(ny, 0, 1);
+        FireAndForget(_session.SendPointerAsync(new PointerEventMessage(x, y, button, action, wheel), CancellationToken.None));
+    }
+
+    public void SendKey(ushort scanCode, ushort virtualKey, bool isExtended, KeyAction action)
+    {
+        if (!CanControl)
+            return;
+        FireAndForget(_session.SendKeyAsync(new KeyEventMessage(scanCode, virtualKey, isExtended, action), CancellationToken.None));
+    }
+
+    // Envio de entrada é de melhor esforço: uma queda de conexão é tratada pela sessão, não deve estourar aqui.
+    private static async void FireAndForget(Task task)
+    {
+        try { await task.ConfigureAwait(false); }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or NexoDesk.Shared.Protocol.ProtocolException or InvalidOperationException or OperationCanceledException) { }
+    }
+
     public event Action? CloseRequested;
 
     public ImageSource? Frame

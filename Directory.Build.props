@@ -7,7 +7,7 @@
     <Deterministic>true</Deterministic>
     <Company>Nexotool</Company>
     <Product>NexoDesk</Product>
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
     <Copyright>Nexotool</Copyright>
   </PropertyGroup>
 </Project>

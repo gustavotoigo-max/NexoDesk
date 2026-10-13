@@ -39,8 +39,8 @@ Toda a lógica de rede e segurança fica em `Shared` de propósito: roda e é te
 |---|---|
 | M1 — Base | Pronto: solução, testes, auditoria, CI no Windows |
 | M2 — Rede | Pronto: escuta no IP Tailscale, mTLS com pinning, pareamento por código, handshake, Ping/Pong, um acesso por PC, consentimento, aviso e corte local |
-| M3 — Captura | Pendente: Desktop Duplication (DXGI) + JPEG; formato `VideoFrame` e exibição no ADMIN prontos |
-| M4 — Visualização | Parcial: janela de acesso com escala uniforme, descarte de frames atrasados, FPS medido |
-| M5 — Controle | Pendente: `SendInput`; contrato, validação e `ReleaseAll` prontos |
+| M3 — Captura | Pronto: captura GDI + JPEG com cursor desenhado; pula frames idênticos |
+| M4 — Visualização | Pronto: janela de acesso com escala uniforme, descarte de frames atrasados, FPS medido |
+| M5 — Controle | Pronto (sessão desbloqueada): mouse, roda e teclado via SendInput; libera teclas/botões ao fim |
 | M6 — Operação | Pronto na interface: lista, pareamento, remoção, reconexão, opções, registros, bandeja, início com o Windows |
 | M7 — Validação | Parcial: instalador pronto; faltam testes entre redes diferentes e assinatura digital |

@@ -72,10 +72,14 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality) : 
                 _lastHash = 0;
             }
 
+            long cursorKey;
             try
             {
-                using (Graphics g = Graphics.FromImage(_bitmap))
-                    g.CopyFromScreen(0, 0, 0, 0, size, CopyPixelOperation.SourceCopy);
+                using Graphics g = Graphics.FromImage(_bitmap);
+                g.CopyFromScreen(0, 0, 0, 0, size, CopyPixelOperation.SourceCopy);
+                // Desenha o cursor na imagem: o CopyFromScreen não o inclui, mas queremos ver o
+                // mouse se mexendo mesmo quando alguém toca no mouse físico do PC REMOTO.
+                cursorKey = DrawCursor(g);
             }
             catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or ExternalException)
             {
@@ -83,7 +87,8 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality) : 
                 return null;
             }
 
-            ulong hash = HashPixels(_bitmap);
+            // A posição do cursor entra no hash para que qualquer movimento do mouse gere um novo frame.
+            ulong hash = HashPixels(_bitmap) ^ (ulong)cursorKey;
             if (hash == _lastHash)
                 return null;
             _lastHash = hash;
@@ -94,6 +99,35 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality) : 
             long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             return new VideoFrame(frameIndex, timestamp, size.Width, size.Height, jpeg);
         }
+    }
+
+    /// <summary>Desenha o cursor atual na imagem e devolve uma chave da posição (para o hash). 0 se oculto.</summary>
+    private static long DrawCursor(Graphics g)
+    {
+        var ci = new CURSORINFO { cbSize = Marshal.SizeOf<CURSORINFO>() };
+        if (!GetCursorInfo(ref ci) || ci.flags != CURSOR_SHOWING || ci.hCursor == IntPtr.Zero)
+            return 0;
+
+        int x = ci.ptScreenPos.X;
+        int y = ci.ptScreenPos.Y;
+        if (GetIconInfo(ci.hCursor, out ICONINFO info))
+        {
+            if (info.hbmMask != IntPtr.Zero) DeleteObject(info.hbmMask);
+            if (info.hbmColor != IntPtr.Zero) DeleteObject(info.hbmColor);
+            x -= info.xHotspot;
+            y -= info.yHotspot;
+        }
+
+        IntPtr hdc = g.GetHdc();
+        try
+        {
+            DrawIconEx(hdc, x, y, ci.hCursor, 0, 0, 0, IntPtr.Zero, DI_NORMAL);
+        }
+        finally
+        {
+            g.ReleaseHdc(hdc);
+        }
+        return ((long)(ci.ptScreenPos.X & 0xFFFF) << 16) | (uint)(ci.ptScreenPos.Y & 0xFFFF);
     }
 
     private byte[] Encode(Bitmap bitmap, int quality)
@@ -138,4 +172,29 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality) : 
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForSystem();
+
+    // --- Cursor ---
+    private const int CURSOR_SHOWING = 1;
+    private const int DI_NORMAL = 3;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X; public int Y; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CURSORINFO { public int cbSize; public int flags; public IntPtr hCursor; public POINT ptScreenPos; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ICONINFO { public bool fIcon; public int xHotspot; public int yHotspot; public IntPtr hbmMask; public IntPtr hbmColor; }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorInfo(ref CURSORINFO pci);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetIconInfo(IntPtr hIcon, out ICONINFO piconinfo);
+
+    [DllImport("user32.dll")]
+    private static extern bool DrawIconEx(IntPtr hdc, int x, int y, IntPtr hIcon, int w, int h, int step, IntPtr brush, int flags);
+
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr obj);
 }

@@ -97,6 +97,25 @@
             </StackPanel>
         </Border>
 
+        <!-- Atualização -->
+        <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,18">
+            <StackPanel>
+                <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="ATUALIZAÇÃO" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource Nx.TextMuted}" FontSize="13"
+                               Text="{Binding Update.Status}" />
+                    <Button Grid.Column="1" Style="{DynamicResource Nx.Button.Small}" Content="Verificar" Command="{Binding Update.CheckCommand}" Margin="10,0,0,0" />
+                    <Button Grid.Column="2" Style="{DynamicResource Nx.Button.Primary.Small}" Content="Baixar e instalar" Command="{Binding Update.InstallCommand}" Margin="8,0,0,0"
+                            Visibility="{Binding Update.Available, Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <Grid>
             <Button Style="{DynamicResource Nx.Link}" Content="Abrir pasta de dados" Command="{Binding OpenDataFolderCommand}" HorizontalAlignment="Left" VerticalAlignment="Center" />
             <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Nx.TextSubtle}">

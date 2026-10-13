@@ -41,5 +41,28 @@
         </StackPanel>
     </ui:NxWindow.FooterRightContent>
 
-    <ContentControl Content="{Binding Content}" Focusable="False" />
+    <DockPanel>
+        <!-- Aviso de atualização disponível -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Nx.InfoSoft}" BorderBrush="{DynamicResource Nx.InfoBorder}"
+                BorderThickness="0,0,0,1" Padding="28,10">
+            <Border.Visibility>
+                <Binding Path="Update.Available" Converter="{StaticResource BoolToVisibility}" />
+            </Border.Visibility>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock FontFamily="{DynamicResource Nx.Icons}" Text="&#xE896;" FontSize="15" Foreground="{DynamicResource Nx.Info}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Update.AvailableText}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource Nx.Text}" />
+                    <TextBlock Text="{Binding Update.Status}" FontSize="12" Foreground="{DynamicResource Nx.TextMuted}" />
+                </StackPanel>
+                <Button Grid.Column="2" Style="{DynamicResource Nx.Button.Primary.Small}" Content="Baixar e instalar" Command="{Binding Update.InstallCommand}" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <ContentControl Content="{Binding Content}" Focusable="False" />
+    </DockPanel>
 </ui:NxWindow>

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using NexoDesk.Shared.Messages;
 using NexoDesk.Shared.Session;
 
@@ -9,6 +10,7 @@ namespace NexoDesk.App.Views;
 public partial class SessionIndicatorWindow : Window
 {
     private readonly Action _endSession;
+    private readonly DispatcherTimer _autoHide;
     private bool _allowClose;
 
     public SessionIndicatorWindow(Action endSession, AgentSession session)
@@ -18,7 +20,10 @@ public partial class SessionIndicatorWindow : Window
         AdminRun.Text = "ADMIN " + session.ClientName;
         ModeRun.Text = session.Mode == SessionMode.Control ? "controlando" : "visualizando";
 
-        Loaded += (_, _) => PlaceAtTopCenter();
+        // Some sozinho depois de 1 minuto; o acesso continua ativo e aparece na janela do PC REMOTO e na bandeja.
+        _autoHide = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+        _autoHide.Tick += (_, _) => Hide();
+        Loaded += (_, _) => { PlaceAtTopCenter(); _autoHide.Start(); };
         SizeChanged += (_, _) => PlaceAtTopCenter();
         // Pode ser arrastada na horizontal se cobrir algo importante.
         MouseLeftButtonDown += (_, e) =>
@@ -32,8 +37,11 @@ public partial class SessionIndicatorWindow : Window
     public void CloseForSessionEnd()
     {
         _allowClose = true;
+        _autoHide.Stop();
         Close();
     }
+
+    private void OnHide(object sender, RoutedEventArgs e) => Hide();
 
     protected override void OnClosing(CancelEventArgs e)
     {

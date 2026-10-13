@@ -35,6 +35,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
     private readonly Dispatcher _dispatcher;
     private readonly SessionLockMonitor _lock = new();
     private readonly GdiScreenCapture _capture;
+    private readonly SendInputSink _input = new();
     private readonly PairingWindow _pairing = new();
     private readonly DispatcherTimer _pairingTimer;
     private AgentHost? _host;
@@ -260,11 +261,10 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
                 ServerId = _state.Config.DeviceId,
                 DisplayName = _state.Config.DeviceName,
                 AppVersion = AppInfo.Version,
-                // Visualização negociada; a imagem chega no M3 e o controle no M5.
-                Features = [Features.View],
+                Features = [Features.View, Features.Control],
                 PolicyTimeout = consentTimeout + TimeSpan.FromSeconds(5),
             },
-        }, new ConsentPolicy(_dispatcher, _lock, () => _state.Config.Remote.UnattendedAccessEnabled, consentTimeout), audit, _capture, input: null, frames: _capture);
+        }, new ConsentPolicy(_dispatcher, _lock, () => _state.Config.Remote.UnattendedAccessEnabled, consentTimeout), audit, _capture, input: _input, frames: _capture);
 
         _host.SessionActivated += session => _dispatcher.InvokeAsync(() =>
         {
