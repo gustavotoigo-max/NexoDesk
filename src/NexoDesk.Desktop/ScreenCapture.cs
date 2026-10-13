@@ -13,7 +13,7 @@ namespace NexoDesk.Desktop;
 /// Captura a tela do PC REMOTO com GDI (CopyFromScreen) e envia como JPEG. Funciona na sessão do usuário
 /// desbloqueada; a tela de bloqueio/login é a etapa do serviço. Pula frames idênticos ao anterior.
 /// </summary>
-public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality) : IDisplaySource, IFrameSource, IDisposable
+public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bool followInputDesktop = false) : IDisplaySource, IFrameSource, IDisposable
 {
     private readonly ImageCodecInfo _jpegCodec = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
     private readonly object _gate = new();
@@ -63,6 +63,11 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality) : 
     {
         lock (_gate)
         {
+            // Como SYSTEM, acompanha o desktop ativo (Default/Winlogon) para capturar a tela
+            // bloqueada e a de login. Na sessão do usuário (App), fica desligado.
+            if (followInputDesktop)
+                InputDesktop.EnsureCurrentThreadOnInputDesktop();
+
             Size size = PrimarySize();
             if (_bitmap is null || _size != size)
             {
