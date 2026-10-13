@@ -241,7 +241,7 @@
                                 </StackPanel>
                             </Border>
                             <TextBlock Style="{DynamicResource Nx.Hint}" VerticalAlignment="Center" Margin="12,0,0,0"
-                                       Text="Mais qualidade = texto mais nítido e um pouco mais de dados pela rede." />
+                                       Text="Máxima = sem perda (texto perfeitamente nítido). Use em telas de disco/texto; gasta um pouco mais de rede." />
                         </StackPanel>
                     </Grid>
                 </StackPanel>

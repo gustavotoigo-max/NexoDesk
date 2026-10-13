@@ -186,12 +186,13 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
-    // Presets de qualidade (qualidade JPEG). Aplicados na hora: a captura lê o valor a cada frame.
-    private const int QNormal = 78, QAlta = 88, QMaxima = 94;
+    // Presets de qualidade. Normal/Alta = JPEG; Máxima (100) = sem perda (PNG) para texto/UI nítidos.
+    // Aplicados na hora: a captura lê o valor a cada quadro.
+    private const int QNormal = 78, QAlta = 90, QMaxima = 100;
 
     public bool QualityNormal { get => _state.Config.Remote.JpegQuality <= QNormal; set { if (value) SetQuality(QNormal); } }
-    public bool QualityAlta { get => _state.Config.Remote.JpegQuality is > QNormal and < QMaxima; set { if (value) SetQuality(QAlta); } }
-    public bool QualityMaxima { get => _state.Config.Remote.JpegQuality >= QMaxima; set { if (value) SetQuality(QMaxima); } }
+    public bool QualityAlta { get => _state.Config.Remote.JpegQuality is > QNormal and < 96; set { if (value) SetQuality(QAlta); } }
+    public bool QualityMaxima { get => _state.Config.Remote.JpegQuality >= 96; set { if (value) SetQuality(QMaxima); } }
 
     private void SetQuality(int q)
     {

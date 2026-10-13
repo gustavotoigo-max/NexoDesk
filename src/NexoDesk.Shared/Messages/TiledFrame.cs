@@ -90,8 +90,11 @@ public sealed record TiledFrame(uint FrameIndex, int ScreenWidth, int ScreenHeig
                 throw new ProtocolException(ErrorCode.MalformedPayload, "retângulo fora da tela");
             if (len < 2 || pos + len > span.Length)
                 throw new ProtocolException(ErrorCode.MalformedPayload, "imagem do retângulo truncada");
-            if (span[pos] != 0xFF || span[pos + 1] != 0xD8)
-                throw new ProtocolException(ErrorCode.MalformedPayload, "retângulo não é JPEG");
+            // Aceita JPEG (FF D8) ou PNG (89 50): PNG é usado nos blocos de texto/UI (sem perda).
+            bool jpeg = span[pos] == 0xFF && span[pos + 1] == 0xD8;
+            bool png = span[pos] == 0x89 && span[pos + 1] == 0x50;
+            if (!jpeg && !png)
+                throw new ProtocolException(ErrorCode.MalformedPayload, "retângulo não é imagem");
             tiles.Add(new ScreenTile(x, y, w, h, mem.Slice(pos, (int)len)));
             pos += (int)len;
         }

@@ -156,13 +156,26 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
             if (changed.Count == 0)
                 return null;
 
-            int quality = Math.Clamp(jpegQuality(), 10, 95);
+            int raw = jpegQuality();
+            bool lossless = raw >= 96;                 // "Máxima" = sem perda (PNG) para texto/UI nítidos
+            int quality = Math.Clamp(raw, 10, 95);
             var tiles = new List<ScreenTile>(changed.Count);
             foreach (ScreenTile t in changed)
             {
                 using Bitmap crop = _bitmap!.Clone(new Rectangle(t.X, t.Y, t.Width, t.Height), PixelFormat.Format24bppRgb);
-                byte[] jpeg = Encode(crop, quality);
-                tiles.Add(t with { Jpeg = jpeg });
+                byte[] data;
+                if (lossless)
+                {
+                    byte[] png = EncodePng(crop);
+                    // Bloco "chapado" (texto/UI) comprime bem em PNG e fica perfeito; bloco fotográfico
+                    // incha em PNG, então nesse caso usa JPEG alto (continua nítido, bem menor).
+                    data = png.Length <= LosslessTileCap ? png : Encode(crop, 92);
+                }
+                else
+                {
+                    data = Encode(crop, quality);
+                }
+                tiles.Add(t with { Jpeg = data });
             }
 
             // Se o quadro ficou grande demais (ex.: tela inteira mudou em alta qualidade), ainda assim
@@ -273,6 +286,16 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
         p.Param[0] = new EncoderParameter(Encoder.Quality, (long)quality);
         using var ms = new MemoryStream(64 * 1024);
         bitmap.Save(ms, _jpegCodec, p);
+        return ms.ToArray();
+    }
+
+    /// <summary>Acima deste tamanho, o bloco PNG é considerado "fotográfico" e vai como JPEG alto.</summary>
+    private const int LosslessTileCap = 80 * 1024;
+
+    private static byte[] EncodePng(Bitmap bitmap)
+    {
+        using var ms = new MemoryStream(64 * 1024);
+        bitmap.Save(ms, ImageFormat.Png);
         return ms.ToArray();
     }
 
