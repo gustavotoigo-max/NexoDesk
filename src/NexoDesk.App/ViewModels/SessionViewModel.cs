@@ -59,6 +59,7 @@ public sealed class SessionViewModel : ObservableObject
         _session.DisplayChanged += d => _dispatcher.InvokeAsync(() => DisplayText = $"{d.Width} × {d.Height} · escala {d.DpiScale:0.##}");
         _session.FrameReceived += OnFrame;
         _session.TilesReceived += OnTiles;
+        _session.H264Received += OnH264;
         _session.CursorMoved += OnCursor;
         _session.Ended += reason => _dispatcher.InvokeAsync(() => OnEnded(reason));
         _main.ShowRemotePointerChanged += () => _dispatcher.InvokeAsync(() =>
@@ -335,6 +336,38 @@ public sealed class SessionViewModel : ObservableObject
     }
 
     private WriteableBitmap? _canvas;
+    private NexoDesk.Codec.H264Decoder? _h264Decoder;
+
+    /// <summary>Recebe um quadro H.264: decodifica (nesta thread) e desenha a imagem na thread de UI.</summary>
+    private void OnH264(H264Frame frame)
+    {
+        if (_ended)
+            return;
+        try
+        {
+            _h264Decoder ??= NexoDesk.Codec.H264Decoder.TryCreate(frame.Width, frame.Height);
+            if (_h264Decoder is null || !_h264Decoder.Decode(frame, out byte[] bgra, out int w, out int h))
+                return;
+
+            byte[] copy = (byte[])bgra.Clone(); // o buffer do decoder é reutilizado; copia p/ a UI
+            int stride = w * 4;
+            _dispatcher.InvokeAsync(() =>
+            {
+                if (_canvas is null || _canvas.PixelWidth != w || _canvas.PixelHeight != h)
+                {
+                    _canvas = new WriteableBitmap(w, h, 96, 96, PixelFormats.Bgr32, null);
+                    Frame = _canvas;
+                }
+                _canvas.WritePixels(new System.Windows.Int32Rect(0, 0, w, h), copy, stride, 0, 0);
+                if (!ReferenceEquals(Frame, _canvas))
+                    Frame = _canvas;
+                Interlocked.Increment(ref _framesThisSecond);
+            }, DispatcherPriority.Render);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+        {
+        }
+    }
 
     /// <summary>
     /// Recebe um quadro por regiões: decodifica cada bloco (nesta thread) e cola na imagem persistente
@@ -402,6 +435,8 @@ public sealed class SessionViewModel : ObservableObject
         EndReason = reason;
         IsEnded = true;
         try { _inputCts.Cancel(); } catch (ObjectDisposedException) { }
+        _h264Decoder?.Dispose();
+        _h264Decoder = null;
         _main.OnSessionEnded(Machine, SessionId, reason);
     }
 }

@@ -38,6 +38,52 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
         return new DisplayInfoMessage(size.Width, size.Height, dpi == 0 ? 1.0 : dpi / 96.0);
     }
 
+    /// <summary>Tela atual em BGRA (32bpp). Usado pelo caminho H.264. Null na tela de bloqueio.</summary>
+    public RawScreen? CaptureRaw()
+    {
+        lock (_gate)
+        {
+            Size size = PrimarySize();
+            if (_bitmap is null || _size != size)
+            {
+                _bitmap?.Dispose();
+                _bitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppRgb);
+                _size = size;
+            }
+
+            try
+            {
+                using Graphics g = Graphics.FromImage(_bitmap);
+                g.CopyFromScreen(0, 0, 0, 0, size, CopyPixelOperation.SourceCopy);
+            }
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or ExternalException)
+            {
+                return null;
+            }
+
+            int stride = size.Width * 4;
+            byte[] bgra = new byte[stride * size.Height];
+            BitmapData data = _bitmap.LockBits(new Rectangle(Point.Empty, size), ImageLockMode.ReadOnly, PixelFormat.Format32bppRgb);
+            try
+            {
+                if (data.Stride == stride)
+                {
+                    Marshal.Copy(data.Scan0, bgra, 0, bgra.Length);
+                }
+                else
+                {
+                    for (int y = 0; y < size.Height; y++)
+                        Marshal.Copy(data.Scan0 + y * data.Stride, bgra, y * stride, stride);
+                }
+            }
+            finally
+            {
+                _bitmap.UnlockBits(data);
+            }
+            return new RawScreen(bgra, stride, size.Width, size.Height);
+        }
+    }
+
     /// <summary>Posição do cursor na tela primária, normalizada 0..1. Visible=false quando oculto.</summary>
     public CursorSample GetCursor()
     {

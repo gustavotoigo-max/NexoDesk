@@ -231,6 +231,24 @@
                             <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
+                        <TextBlock Style="{DynamicResource Nx.FieldLabel}" Text="Modo de vídeo" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Border Style="{DynamicResource Nx.Segmented}">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Video" Content="Imagem" IsChecked="{Binding VideoImage}" />
+                                    <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Video" Content="H.264 (fluido)" IsChecked="{Binding VideoH264}" Margin="0" />
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Style="{DynamicResource Nx.Hint}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                       Text="Imagem: sem perda ao parar (cor/texto perfeitos). H.264: movimento fluido (vídeo, arrastar janelas)." />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
                         <TextBlock Style="{DynamicResource Nx.FieldLabel}" Text="Qualidade da imagem" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Border Style="{DynamicResource Nx.Segmented}">
