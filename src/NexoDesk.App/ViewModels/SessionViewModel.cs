@@ -22,6 +22,19 @@ public sealed class SessionViewModel : ObservableObject
     private readonly AdminViewModel _main;
     private readonly Dispatcher _dispatcher;
     private readonly DispatcherTimer _fpsTimer;
+
+    // Bomba de entrada: movimentos do mouse chegam muito rápido (a cada poucos ms). Enviar
+    // um por um entope o canal e o cursor remoto fica "arrastando" posições velhas. Aqui os
+    // movimentos são coalescidos (só o mais recente fica na fila) e há no máximo um envio em
+    // andamento; cliques, roda e teclas nunca são descartados e mantêm a ordem — cada clique
+    // já carrega a própria coordenada, então largar movimentos intermediários não erra o alvo.
+    private readonly object _inputLock = new();
+    private readonly Queue<Func<CancellationToken, Task>> _inputEvents = new();
+    private readonly SemaphoreSlim _inputSignal = new(0);
+    private readonly CancellationTokenSource _inputCts = new();
+    private PointerEventMessage? _pendingMove;
+    private bool _pumpIdle = true;
+
     private VideoFrame? _pendingFrame;
     private int _decoding;
     private int _framesThisSecond;
@@ -57,6 +70,8 @@ public sealed class SessionViewModel : ObservableObject
         DisconnectCommand = new AsyncRelayCommand(DisconnectAsync, () => !IsEnded);
         ReconnectCommand = new AsyncRelayCommand(ReconnectAsync, () => IsEnded);
         CloseCommand = new RelayCommand(() => CloseRequested?.Invoke());
+
+        _ = Task.Run(() => InputPumpAsync(_inputCts.Token));
     }
 
     public MachineViewModel Machine { get; }
@@ -87,21 +102,87 @@ public sealed class SessionViewModel : ObservableObject
             return;
         double x = Math.Clamp(nx, 0, 1);
         double y = Math.Clamp(ny, 0, 1);
-        FireAndForget(_session.SendPointerAsync(new PointerEventMessage(x, y, button, action, wheel), CancellationToken.None));
+        var msg = new PointerEventMessage(x, y, button, action, wheel);
+
+        if (action == PointerAction.Move)
+            EnqueueMove(msg);
+        else
+            Enqueue(ct => _session.SendPointerAsync(msg, ct));
     }
 
     public void SendKey(ushort scanCode, ushort virtualKey, bool isExtended, KeyAction action)
     {
         if (!CanControl)
             return;
-        FireAndForget(_session.SendKeyAsync(new KeyEventMessage(scanCode, virtualKey, isExtended, action), CancellationToken.None));
+        var msg = new KeyEventMessage(scanCode, virtualKey, isExtended, action);
+        Enqueue(ct => _session.SendKeyAsync(msg, ct));
     }
 
-    // Envio de entrada é de melhor esforço: uma queda de conexão é tratada pela sessão, não deve estourar aqui.
-    private static async void FireAndForget(Task task)
+    /// <summary>Guarda só o movimento mais recente; os anteriores ainda não enviados são descartados.</summary>
+    private void EnqueueMove(PointerEventMessage move)
     {
-        try { await task.ConfigureAwait(false); }
-        catch (Exception ex) when (ex is IOException or ObjectDisposedException or NexoDesk.Shared.Protocol.ProtocolException or InvalidOperationException or OperationCanceledException) { }
+        bool wake;
+        lock (_inputLock)
+        {
+            _pendingMove = move;
+            wake = _pumpIdle;
+            if (wake)
+                _pumpIdle = false;
+        }
+        if (wake)
+            _inputSignal.Release();
+    }
+
+    /// <summary>Eventos discretos (clique, roda, tecla) entram em ordem e nunca são descartados.</summary>
+    private void Enqueue(Func<CancellationToken, Task> job)
+    {
+        bool wake;
+        lock (_inputLock)
+        {
+            _inputEvents.Enqueue(job);
+            wake = _pumpIdle;
+            if (wake)
+                _pumpIdle = false;
+        }
+        if (wake)
+            _inputSignal.Release();
+    }
+
+    private async Task InputPumpAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await _inputSignal.WaitAsync(ct).ConfigureAwait(false);
+                while (true)
+                {
+                    Func<CancellationToken, Task>? job;
+                    lock (_inputLock)
+                    {
+                        if (_inputEvents.Count > 0)
+                        {
+                            job = _inputEvents.Dequeue();
+                        }
+                        else if (_pendingMove is { } move)
+                        {
+                            _pendingMove = null;
+                            job = c => _session.SendPointerAsync(move, c);
+                        }
+                        else
+                        {
+                            _pumpIdle = true; // nada pendente: dorme até o próximo sinal.
+                            break;
+                        }
+                    }
+                    try { await job(ct).ConfigureAwait(false); }
+                    catch (Exception ex) when (ex is IOException or ObjectDisposedException or NexoDesk.Shared.Protocol.ProtocolException or InvalidOperationException or OperationCanceledException) { }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     public event Action? CloseRequested;
@@ -229,6 +310,7 @@ public sealed class SessionViewModel : ObservableObject
         FpsText = "0";
         EndReason = reason;
         IsEnded = true;
+        try { _inputCts.Cancel(); } catch (ObjectDisposedException) { }
         _main.OnSessionEnded(Machine, SessionId, reason);
     }
 }
