@@ -68,6 +68,7 @@ public sealed class AdminSession : IAsyncDisposable
 
     public event Action<DisplayInfoMessage>? DisplayChanged;
     public event Action<VideoFrame>? FrameReceived;
+    public event Action<CursorUpdateMessage>? CursorMoved;
     public event Action<TimeSpan>? LatencyMeasured;
 
     /// <summary>Disparado uma única vez quando a sessão termina, com o motivo em português.</summary>
@@ -171,6 +172,9 @@ public sealed class AdminSession : IAsyncDisposable
                         break;
                     case MessageType.VideoFrame:
                         FrameReceived?.Invoke(VideoFrame.Decode(env));
+                        break;
+                    case MessageType.CursorUpdate:
+                        CursorMoved?.Invoke(ProtocolJson.Deserialize<CursorUpdateMessage>(env));
                         break;
                     case MessageType.Ping:
                         PingMessage ping = ProtocolJson.Deserialize<PingMessage>(env);

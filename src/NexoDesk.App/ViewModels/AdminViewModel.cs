@@ -68,6 +68,23 @@ public sealed class AdminViewModel : ObservableObject
     public bool HasMachines => Machines.Count > 0;
     public string CountText => $"{Machines.Count} de {AppConfig.MaxComputers}";
 
+    /// <summary>Disparado quando "Ver ponteiro do mouse" muda, para as sessões abertas atualizarem o overlay.</summary>
+    public event Action? ShowRemotePointerChanged;
+
+    /// <summary>Preferência do ADMIN: desenhar o ponteiro do PC REMOTO sobre a imagem.</summary>
+    public bool ShowRemotePointer
+    {
+        get => _state.Config.Admin.ShowRemotePointer;
+        set
+        {
+            if (value == ShowRemotePointer)
+                return;
+            _state.Update(c => c.Admin.ShowRemotePointer = value);
+            OnPropertyChanged();
+            ShowRemotePointerChanged?.Invoke();
+        }
+    }
+
     public string Summary
     {
         get

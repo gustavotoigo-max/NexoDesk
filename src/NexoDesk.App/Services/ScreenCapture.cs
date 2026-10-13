@@ -13,7 +13,7 @@ namespace NexoDesk.App.Services;
 /// Captura a tela do PC REMOTO com GDI (CopyFromScreen) e envia como JPEG. Funciona na sessão do usuário
 /// desbloqueada; a tela de bloqueio/login é a etapa do serviço. Pula frames idênticos ao anterior.
 /// </summary>
-public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality) : IDisplaySource, IFrameSource, IDisposable
+public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bool compositeCursor = false) : IDisplaySource, IFrameSource, ICursorSource, IDisposable
 {
     private readonly ImageCodecInfo _jpegCodec = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
     private readonly object _gate = new();
@@ -27,6 +27,19 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality) : 
         Size size = PrimarySize();
         uint dpi = GetDpiForSystem();
         return new DisplayInfoMessage(size.Width, size.Height, dpi == 0 ? 1.0 : dpi / 96.0);
+    }
+
+    /// <summary>Posição do cursor na tela primária, normalizada 0..1. Visible=false quando oculto.</summary>
+    public CursorSample GetCursor()
+    {
+        var ci = new CURSORINFO { cbSize = Marshal.SizeOf<CURSORINFO>() };
+        if (!GetCursorInfo(ref ci) || ci.flags != CURSOR_SHOWING)
+            return new CursorSample(0, 0, Visible: false);
+
+        Size size = PrimarySize();
+        double x = Math.Clamp((double)ci.ptScreenPos.X / size.Width, 0, 1);
+        double y = Math.Clamp((double)ci.ptScreenPos.Y / size.Height, 0, 1);
+        return new CursorSample(x, y, Visible: true);
     }
 
     public async Task<VideoFrame?> NextFrameAsync(uint frameIndex, CancellationToken ct)
@@ -72,14 +85,15 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality) : 
                 _lastHash = 0;
             }
 
-            long cursorKey;
+            long cursorKey = 0;
             try
             {
                 using Graphics g = Graphics.FromImage(_bitmap);
                 g.CopyFromScreen(0, 0, 0, 0, size, CopyPixelOperation.SourceCopy);
-                // Desenha o cursor na imagem: o CopyFromScreen não o inclui, mas queremos ver o
-                // mouse se mexendo mesmo quando alguém toca no mouse físico do PC REMOTO.
-                cursorKey = DrawCursor(g);
+                // Por padrão o cursor NÃO entra na imagem: ele vai em mensagens leves (CursorUpdate)
+                // e o ADMIN o desenha por cima. Assim mover o mouse não re-encoda a tela inteira.
+                if (compositeCursor)
+                    cursorKey = DrawCursor(g);
             }
             catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or ExternalException)
             {
@@ -87,7 +101,7 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality) : 
                 return null;
             }
 
-            // A posição do cursor entra no hash para que qualquer movimento do mouse gere um novo frame.
+            // Sem o cursor na imagem, só mudanças reais de tela geram frame novo (cursorKey=0).
             ulong hash = HashPixels(_bitmap) ^ (ulong)cursorKey;
             if (hash == _lastHash)
                 return null;

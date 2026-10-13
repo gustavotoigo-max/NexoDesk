@@ -18,6 +18,7 @@ namespace NexoDesk.Shared.Messages;
 [JsonSerializable(typeof(SessionDeniedMessage))]
 [JsonSerializable(typeof(DisplayInfoMessage))]
 [JsonSerializable(typeof(PointerEventMessage))]
+[JsonSerializable(typeof(CursorUpdateMessage))]
 [JsonSerializable(typeof(KeyEventMessage))]
 [JsonSerializable(typeof(PingMessage))]
 [JsonSerializable(typeof(PongMessage))]
@@ -39,6 +40,7 @@ public static class ProtocolJson
         [typeof(SessionDeniedMessage)] = MessageType.SessionDenied,
         [typeof(DisplayInfoMessage)] = MessageType.DisplayInfo,
         [typeof(PointerEventMessage)] = MessageType.PointerEvent,
+        [typeof(CursorUpdateMessage)] = MessageType.CursorUpdate,
         [typeof(KeyEventMessage)] = MessageType.KeyEvent,
         [typeof(PingMessage)] = MessageType.Ping,
         [typeof(PongMessage)] = MessageType.Pong,

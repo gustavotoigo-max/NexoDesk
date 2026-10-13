@@ -44,6 +44,9 @@ public sealed class SessionViewModel : ObservableObject
     private bool _ended;
     private string _endReason = "";
     private string _displayText = "aguardando";
+    private double _cursorX;
+    private double _cursorY;
+    private bool _cursorVisible;
 
     public SessionViewModel(AdminSession session, MachineViewModel machine, AdminViewModel main)
     {
@@ -55,7 +58,14 @@ public sealed class SessionViewModel : ObservableObject
         _session.LatencyMeasured += l => _dispatcher.InvokeAsync(() => LatencyText = $"{l.TotalMilliseconds:0} ms");
         _session.DisplayChanged += d => _dispatcher.InvokeAsync(() => DisplayText = $"{d.Width} × {d.Height} · escala {d.DpiScale:0.##}");
         _session.FrameReceived += OnFrame;
+        _session.CursorMoved += OnCursor;
         _session.Ended += reason => _dispatcher.InvokeAsync(() => OnEnded(reason));
+        _main.ShowRemotePointerChanged += () => _dispatcher.InvokeAsync(() =>
+        {
+            OnPropertyChanged(nameof(ShowRemotePointer));
+            OnPropertyChanged(nameof(ShowCursorOverlay));
+            CursorChanged?.Invoke();
+        });
 
         if (_session.Display is { } display)
             _displayText = $"{display.Width} × {display.Height} · escala {display.DpiScale:0.##}";
@@ -196,6 +206,7 @@ public sealed class SessionViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(HasFrame));
                 OnPropertyChanged(nameof(ShowWaiting));
+                OnPropertyChanged(nameof(ShowCursorOverlay));
             }
         }
     }
@@ -204,6 +215,34 @@ public sealed class SessionViewModel : ObservableObject
 
     /// <summary>Conectado e ainda sem imagem.</summary>
     public bool ShowWaiting => !HasFrame && !IsEnded;
+
+    // --- Ponteiro do PC REMOTO (desenhado por cima da imagem; vem à parte dos frames) ---
+
+    /// <summary>Posição X do cursor remoto, normalizada 0..1.</summary>
+    public double CursorX => _cursorX;
+    /// <summary>Posição Y do cursor remoto, normalizada 0..1.</summary>
+    public double CursorY => _cursorY;
+
+    /// <summary>Preferência do ADMIN de mostrar o ponteiro remoto.</summary>
+    public bool ShowRemotePointer => _main.ShowRemotePointer;
+
+    /// <summary>Desenhar o ponteiro agora: ligado na preferência, visível na tela remota e com imagem.</summary>
+    public bool ShowCursorOverlay => ShowRemotePointer && _cursorVisible && HasFrame && !IsEnded;
+
+    /// <summary>Disparado quando a posição/visibilidade do ponteiro muda (a janela reposiciona o overlay).</summary>
+    public event Action? CursorChanged;
+
+    private void OnCursor(CursorUpdateMessage c) => _dispatcher.InvokeAsync(() =>
+    {
+        _cursorX = c.X;
+        _cursorY = c.Y;
+        if (_cursorVisible != c.Visible)
+        {
+            _cursorVisible = c.Visible;
+            OnPropertyChanged(nameof(ShowCursorOverlay));
+        }
+        CursorChanged?.Invoke();
+    });
 
     /// <summary>Conectado em "Só ver": mostra um aviso de que o mouse/teclado não comandam.</summary>
     public bool ViewOnly => !IsEnded && !_session.CanControl;
@@ -238,6 +277,8 @@ public sealed class SessionViewModel : ObservableObject
                 OnPropertyChanged(nameof(ShowWaiting));
                 OnPropertyChanged(nameof(ViewOnly));
                 OnPropertyChanged(nameof(CanControl));
+                OnPropertyChanged(nameof(ShowCursorOverlay));
+                CursorChanged?.Invoke();
                 CommandManager.InvalidateRequerySuggested();
             }
         }

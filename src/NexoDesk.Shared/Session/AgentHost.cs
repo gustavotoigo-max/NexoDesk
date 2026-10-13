@@ -37,6 +37,7 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
     private readonly IDisplaySource? _display;
     private readonly IInputSink? _input;
     private readonly IFrameSource? _frames;
+    private readonly ICursorSource? _cursor;
     private readonly PinnedCertificateValidator _clientValidator;
     private readonly IClientStore _clients;
     private readonly ConnectionRateLimiter _rateLimiter;
@@ -48,7 +49,7 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
     private Task? _acceptLoop;
     private AgentSession? _current;
 
-    public AgentHost(AgentHostOptions options, IAgentPolicy policy, IAuditLog audit, IDisplaySource? display = null, IInputSink? input = null, IFrameSource? frames = null)
+    public AgentHost(AgentHostOptions options, IAgentPolicy policy, IAuditLog audit, IDisplaySource? display = null, IInputSink? input = null, IFrameSource? frames = null, ICursorSource? cursor = null)
     {
         if (TailscaleAddress.IsWildcard(options.Endpoint.Address))
             throw new ArgumentException("O Agent não pode escutar em todas as interfaces (0.0.0.0/::).", nameof(options));
@@ -59,6 +60,7 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
         _display = display;
         _input = input;
         _frames = frames;
+        _cursor = cursor;
         _clients = options.Clients;
         _clientValidator = new PinnedCertificateValidator(
             fp => _clients.Find(fp) is not null,
@@ -168,7 +170,7 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
                 clientName: who?.Name ?? "(pareamento)", result: channel.NegotiatedProtocol);
 
             var gatePolicy = new GatedPolicy(_gate, _policy);
-            var session = new AgentSession(channel, who, _options.Session, gatePolicy, _audit, _display, _input, this, _frames);
+            var session = new AgentSession(channel, who, _options.Session, gatePolicy, _audit, _display, _input, this, _frames, _cursor);
             session.Activated += s =>
             {
                 Volatile.Write(ref _current, s);

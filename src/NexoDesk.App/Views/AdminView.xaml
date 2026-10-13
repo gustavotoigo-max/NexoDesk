@@ -140,6 +140,16 @@
                         </StackPanel>
                     </Grid>
 
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{DynamicResource Nx.FieldLabel}" Text="Ponteiro" />
+                        <CheckBox Grid.Column="1" Style="{DynamicResource Nx.Switch}" IsChecked="{Binding ShowRemotePointer}"
+                                  Content="Ver ponteiro do mouse do PC REMOTO sobre a imagem" />
+                    </Grid>
+
                     <ProgressBar Margin="0,16,0,0" IsIndeterminate="True">
                         <ProgressBar.Style>
                             <Style TargetType="ProgressBar" BasedOn="{StaticResource Nx.Progress}">

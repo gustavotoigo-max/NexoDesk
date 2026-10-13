@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using NexoDesk.App.ViewModels;
 using NexoDesk.Shared.Messages;
@@ -26,6 +27,40 @@ public partial class SessionWindow : NxWindow
         RemoteImage.MouseEnter += (_, _) => { if (_vm.CanControl) RemoteImage.Focus(); };
         PreviewKeyDown += OnKeyDown;
         PreviewKeyUp += OnKeyUp;
+
+        // Ponteiro do PC REMOTO: reposiciona quando ele se move ou a área da imagem muda.
+        _vm.CursorChanged += UpdateCursorOverlay;
+        RemoteImage.SizeChanged += (_, _) => UpdateCursorOverlay();
+    }
+
+    /// <summary>Coloca o ponteiro remoto sobre a imagem usando a mesma conta de letterbox do controle.</summary>
+    private void UpdateCursorOverlay()
+    {
+        if (!_vm.ShowCursorOverlay)
+        {
+            CursorArrow.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        double containerW = RemoteImage.ActualWidth;
+        double containerH = RemoteImage.ActualHeight;
+        if (containerW <= 0 || containerH <= 0)
+        {
+            CursorArrow.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        double srcW = _vm.RemoteWidth;
+        double srcH = _vm.RemoteHeight;
+        double scale = Math.Min(containerW / srcW, containerH / srcH);
+        double contentW = srcW * scale;
+        double contentH = srcH * scale;
+        double offsetX = (containerW - contentW) / 2;
+        double offsetY = (containerH - contentH) / 2;
+
+        Canvas.SetLeft(CursorArrow, offsetX + _vm.CursorX * contentW);
+        Canvas.SetTop(CursorArrow, offsetY + _vm.CursorY * contentH);
+        CursorArrow.Visibility = Visibility.Visible;
     }
 
     /// <summary>

@@ -137,6 +137,20 @@ public sealed record PointerEventMessage(double X, double Y, PointerButton Butto
     }
 }
 
+/// <summary>
+/// Posição do cursor do PC REMOTO (normalizada 0..1), enviada à parte dos frames de vídeo.
+/// Assim mover o mouse não re-encoda a tela inteira: o ponteiro vai em mensagens minúsculas e o
+/// ADMIN o desenha por cima da imagem. Visible=false quando o cursor está oculto na tela remota.
+/// </summary>
+public sealed record CursorUpdateMessage(double X, double Y, bool Visible) : IControlMessage
+{
+    public void Validate()
+    {
+        if (!double.IsFinite(X) || !double.IsFinite(Y) || X is < 0 or > 1 || Y is < 0 or > 1)
+            throw new ProtocolException(ErrorCode.MalformedPayload, "coordenadas do cursor fora de [0,1]");
+    }
+}
+
 public sealed record KeyEventMessage(ushort ScanCode, ushort VirtualKey, bool IsExtended, KeyAction Action) : IControlMessage
 {
     public void Validate()

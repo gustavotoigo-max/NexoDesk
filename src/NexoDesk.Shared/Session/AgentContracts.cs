@@ -44,6 +44,18 @@ public interface IFrameSource
     void Reset();
 }
 
+/// <summary>Posição do cursor na tela remota, normalizada 0..1. Visible=false quando oculto.</summary>
+public readonly record struct CursorSample(double X, double Y, bool Visible);
+
+/// <summary>
+/// Lê a posição atual do cursor do PC REMOTO, à parte da captura de vídeo. Assim o ponteiro é
+/// enviado em mensagens leves (CursorUpdate) e o ADMIN o desenha por cima, sem re-encodar a tela.
+/// </summary>
+public interface ICursorSource
+{
+    CursorSample GetCursor();
+}
+
 /// <summary>Aplica entrada remota. Implementado no Agent a partir do M5 (SendInput).</summary>
 public interface IInputSink
 {

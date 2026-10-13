@@ -41,6 +41,17 @@
         <!-- Vídeo remoto: ajustado à área útil, sem distorção -->
         <Image x:Name="RemoteImage" Source="{Binding Frame}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True" Focusable="True" />
 
+        <!-- Ponteiro do PC REMOTO: desenhado por cima da imagem, posicionado no código. -->
+        <Canvas x:Name="CursorLayer" IsHitTestVisible="False">
+            <Path x:Name="CursorArrow" Visibility="Collapsed"
+                  Data="M0,0 L0,16 L4,12 L7,19 L9.5,18 L6.5,11 L11,11 Z"
+                  Fill="White" Stroke="#101317" StrokeThickness="1" StrokeLineJoin="Round">
+                <Path.Effect>
+                    <DropShadowEffect Color="#000000" BlurRadius="3" ShadowDepth="0" Opacity="0.6" />
+                </Path.Effect>
+            </Path>
+        </Canvas>
+
         <!-- Aviso: conectado em "Só ver" (mouse/teclado não comandam) -->
         <Border VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,12,0,0" CornerRadius="10" Padding="16,8"
                 Background="{DynamicResource Nx.WarningSoft}" BorderBrush="{DynamicResource Nx.WarningBorder}" BorderThickness="1">

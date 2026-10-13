@@ -268,7 +268,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
                 Features = [Features.View, Features.Control],
                 PolicyTimeout = consentTimeout + TimeSpan.FromSeconds(5),
             },
-        }, new ConsentPolicy(_dispatcher, _lock, () => _state.Config.Remote.UnattendedAccessEnabled, consentTimeout), audit, _capture, input: _input, frames: _capture);
+        }, new ConsentPolicy(_dispatcher, _lock, () => _state.Config.Remote.UnattendedAccessEnabled, consentTimeout), audit, _capture, input: _input, frames: _capture, cursor: _capture);
 
         _host.SessionActivated += session => _dispatcher.InvokeAsync(() =>
         {

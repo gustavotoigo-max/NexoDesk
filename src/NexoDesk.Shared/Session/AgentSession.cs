@@ -38,6 +38,7 @@ public sealed class AgentSession
     private readonly IDisplaySource? _display;
     private readonly IInputSink? _input;
     private readonly IFrameSource? _frames;
+    private readonly ICursorSource? _cursor;
     private readonly CancellationTokenSource _endCts = new();
     private EndReason? _localEndReason;
 
@@ -50,7 +51,8 @@ public sealed class AgentSession
         IDisplaySource? display = null,
         IInputSink? input = null,
         IPairingHandler? pairing = null,
-        IFrameSource? frames = null)
+        IFrameSource? frames = null,
+        ICursorSource? cursor = null)
     {
         _channel = channel;
         _client = client;
@@ -60,6 +62,7 @@ public sealed class AgentSession
         _display = display;
         _input = input;
         _frames = frames;
+        _cursor = cursor;
         _pairing = pairing;
         StateMachine = new SessionStateMachine(SessionRole.Agent);
         SessionId = Guid.NewGuid().ToString("N")[..12];
@@ -226,8 +229,9 @@ public sealed class AgentSession
     {
         bool control = Mode == SessionMode.Control;
         using var loopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-        // Envia os frames da tela em paralelo com a recepção de ping/entrada.
+        // Envia os frames da tela e a posição do cursor em paralelo com a recepção de ping/entrada.
         Task framePump = _frames is not null ? FramePumpAsync(loopCts.Token) : Task.CompletedTask;
+        Task cursorPump = _cursor is not null ? CursorPumpAsync(loopCts.Token) : Task.CompletedTask;
         try
         {
             while (true)
@@ -260,9 +264,40 @@ public sealed class AgentSession
         finally
         {
             loopCts.Cancel();
-            try { await framePump.ConfigureAwait(false); }
+            try { await Task.WhenAll(framePump, cursorPump).ConfigureAwait(false); }
             catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException) { }
             _frames?.Reset();
+        }
+    }
+
+    /// <summary>
+    /// Envia a posição do cursor em alta taxa (leve), só quando muda. Desacoplado dos frames: mover
+    /// o mouse não re-encoda a tela, e o ponteiro no ADMIN acompanha de perto o movimento remoto.
+    /// </summary>
+    private async Task CursorPumpAsync(CancellationToken token)
+    {
+        const int hz = 60;
+        var interval = TimeSpan.FromMilliseconds(1000.0 / hz);
+        CursorSample last = new(-1, -1, false);
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                CursorSample now = _cursor!.GetCursor();
+                if (now != last)
+                {
+                    last = now;
+                    await _channel.SendAsync(new CursorUpdateMessage(now.X, now.Y, now.Visible), token).ConfigureAwait(false);
+                }
+                await Task.Delay(interval, token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or ProtocolException or InvalidOperationException)
+        {
+            // Conexão caiu: o laço de recepção encerra a sessão.
         }
     }
 

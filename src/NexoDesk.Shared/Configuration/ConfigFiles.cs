@@ -43,8 +43,8 @@ public sealed record RemoteSettings
 
     public int ConsentTimeoutSeconds { get; set; } = 30;
     public bool StartWithWindows { get; set; } = true;
-    public int MaxFps { get; set; } = 12;
-    public int JpegQuality { get; set; } = 70;
+    public int MaxFps { get; set; } = 18;
+    public int JpegQuality { get; set; } = 85;
 
     /// <summary>"auto" (IP Tailscale) ou um IP. 0.0.0.0/:: nunca são aceitos.</summary>
     public string ListenAddress { get; set; } = "auto";
@@ -58,6 +58,9 @@ public sealed record RemoteSettings
 public sealed record AdminSettings
 {
     public List<PairedComputer> Computers { get; set; } = [];
+
+    /// <summary>Mostrar o ponteiro do PC REMOTO sobreposto à imagem (ver movimento físico do mouse lá).</summary>
+    public bool ShowRemotePointer { get; set; } = true;
 }
 
 /// <summary>
