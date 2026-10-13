@@ -38,6 +38,7 @@ public sealed class AgentSession
     private readonly IDisplaySource? _display;
     private readonly IInputSink? _input;
     private readonly IFrameSource? _frames;
+    private readonly ITiledFrameSource? _tiles;
     private readonly ICursorSource? _cursor;
     private readonly CancellationTokenSource _endCts = new();
     private EndReason? _localEndReason;
@@ -52,7 +53,8 @@ public sealed class AgentSession
         IInputSink? input = null,
         IPairingHandler? pairing = null,
         IFrameSource? frames = null,
-        ICursorSource? cursor = null)
+        ICursorSource? cursor = null,
+        ITiledFrameSource? tiles = null)
     {
         _channel = channel;
         _client = client;
@@ -62,6 +64,7 @@ public sealed class AgentSession
         _display = display;
         _input = input;
         _frames = frames;
+        _tiles = tiles;
         _cursor = cursor;
         _pairing = pairing;
         StateMachine = new SessionStateMachine(SessionRole.Agent);
@@ -229,8 +232,10 @@ public sealed class AgentSession
     {
         bool control = Mode == SessionMode.Control;
         using var loopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-        // Envia os frames da tela e a posição do cursor em paralelo com a recepção de ping/entrada.
-        Task framePump = _frames is not null ? FramePumpAsync(loopCts.Token) : Task.CompletedTask;
+        // Envia a tela (por regiões, se disponível) e a posição do cursor em paralelo com a entrada.
+        Task framePump = _tiles is not null ? TilePumpAsync(loopCts.Token)
+            : _frames is not null ? FramePumpAsync(loopCts.Token)
+            : Task.CompletedTask;
         Task cursorPump = _cursor is not null ? CursorPumpAsync(loopCts.Token) : Task.CompletedTask;
         try
         {
@@ -267,6 +272,44 @@ public sealed class AgentSession
             try { await Task.WhenAll(framePump, cursorPump).ConfigureAwait(false); }
             catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException) { }
             _frames?.Reset();
+            _tiles?.Reset();
+        }
+    }
+
+    /// <summary>Envia a tela por regiões (só o que mudou). Mantém tráfego e latência baixos.</summary>
+    private async Task TilePumpAsync(CancellationToken token)
+    {
+        uint index = 0;
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                TiledFrame? frame = await _tiles!.NextTiledFrameAsync(index, token).ConfigureAwait(false);
+                if (frame is null)
+                    continue;
+
+                byte[] payload;
+                try
+                {
+                    payload = frame.Encode();
+                }
+                catch (ProtocolException)
+                {
+                    // Quadro grande demais (mudança da tela inteira em alta qualidade): pula este e
+                    // reenvia tudo no próximo, em vez de derrubar a sessão.
+                    _tiles.Reset();
+                    continue;
+                }
+                await _channel.SendRawAsync(MessageType.VideoTiles, payload, token).ConfigureAwait(false);
+                index++;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or ProtocolException or InvalidOperationException)
+        {
+            // A conexão caiu: o laço de recepção encerra a sessão.
         }
     }
 

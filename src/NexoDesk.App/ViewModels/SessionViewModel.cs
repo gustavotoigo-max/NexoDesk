@@ -58,6 +58,7 @@ public sealed class SessionViewModel : ObservableObject
         _session.LatencyMeasured += l => _dispatcher.InvokeAsync(() => LatencyText = $"{l.TotalMilliseconds:0} ms");
         _session.DisplayChanged += d => _dispatcher.InvokeAsync(() => DisplayText = $"{d.Width} × {d.Height} · escala {d.DpiScale:0.##}");
         _session.FrameReceived += OnFrame;
+        _session.TilesReceived += OnTiles;
         _session.CursorMoved += OnCursor;
         _session.Ended += reason => _dispatcher.InvokeAsync(() => OnEnded(reason));
         _main.ShowRemotePointerChanged += () => _dispatcher.InvokeAsync(() =>
@@ -331,6 +332,55 @@ public sealed class SessionViewModel : ObservableObject
                 Volatile.Write(ref _decoding, 0);
             }
         });
+    }
+
+    private WriteableBitmap? _canvas;
+
+    /// <summary>
+    /// Recebe um quadro por regiões: decodifica cada bloco (nesta thread) e cola na imagem persistente
+    /// na thread de interface. Só os retângulos que mudaram são atualizados — pouco dado, baixa latência.
+    /// </summary>
+    private void OnTiles(TiledFrame tf)
+    {
+        var writes = new List<(int X, int Y, int W, int H, byte[] Px, int Stride)>(tf.Tiles.Count);
+        foreach (ScreenTile t in tf.Tiles)
+        {
+            try
+            {
+                var img = new BitmapImage();
+                img.BeginInit();
+                img.CacheOption = BitmapCacheOption.OnLoad;
+                img.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+                img.StreamSource = new MemoryStream(t.Jpeg.ToArray(), writable: false);
+                img.EndInit();
+                var bgr = new FormatConvertedBitmap(img, PixelFormats.Bgr32, null, 0);
+                int stride = t.Width * 4;
+                byte[] px = new byte[stride * t.Height];
+                bgr.CopyPixels(px, stride, 0);
+                writes.Add((t.X, t.Y, t.Width, t.Height, px, stride));
+            }
+            catch (Exception ex) when (ex is NotSupportedException or FileFormatException or IOException or OverflowException)
+            {
+                // Bloco inválido: ignora; a próxima mudança dele reenvia.
+            }
+        }
+
+        if (writes.Count == 0)
+            return;
+
+        _dispatcher.InvokeAsync(() =>
+        {
+            if (_canvas is null || _canvas.PixelWidth != tf.ScreenWidth || _canvas.PixelHeight != tf.ScreenHeight)
+            {
+                _canvas = new WriteableBitmap(tf.ScreenWidth, tf.ScreenHeight, 96, 96, PixelFormats.Bgr32, null);
+                Frame = _canvas;
+            }
+            foreach ((int x, int y, int w, int h, byte[] pxData, int stride) in writes)
+                _canvas.WritePixels(new System.Windows.Int32Rect(0, 0, w, h), pxData, stride, x, y);
+            if (!ReferenceEquals(Frame, _canvas))
+                Frame = _canvas;
+            Interlocked.Increment(ref _framesThisSecond);
+        }, DispatcherPriority.Render);
     }
 
     private static BitmapImage Decode(VideoFrame frame)

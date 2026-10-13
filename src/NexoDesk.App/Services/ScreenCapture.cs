@@ -13,14 +13,22 @@ namespace NexoDesk.App.Services;
 /// Captura a tela do PC REMOTO com GDI (CopyFromScreen) e envia como JPEG. Funciona na sessão do usuário
 /// desbloqueada; a tela de bloqueio/login é a etapa do serviço. Pula frames idênticos ao anterior.
 /// </summary>
-public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bool compositeCursor = false) : IDisplaySource, IFrameSource, ICursorSource, IDisposable
+public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bool compositeCursor = false) : IDisplaySource, IFrameSource, ITiledFrameSource, ICursorSource, IDisposable
 {
+    private const int TileSize = 256;
+
     private readonly ImageCodecInfo _jpegCodec = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
     private readonly object _gate = new();
     private Bitmap? _bitmap;
     private Size _size;
     private ulong _lastHash;
     private long _nextTicks;
+
+    // Estado do diff por regiões: hash de cada bloco do quadro anterior.
+    private ulong[]? _tileHashes;
+    private int _tileCols;
+    private int _tileRows;
+    private long _tileNextTicks;
 
     public DisplayInfoMessage GetDisplayInfo()
     {
@@ -67,7 +75,122 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
             _bitmap = null;
             _lastHash = 0;
             _nextTicks = 0;
+            _tileHashes = null;
+            _tileNextTicks = 0;
         }
+    }
+
+    // ===================== Captura por regiões (tiles) =====================
+
+    /// <summary>Captura e devolve só os blocos que mudaram desde o quadro anterior. Null se nada mudou.</summary>
+    public async Task<TiledFrame?> NextTiledFrameAsync(uint frameIndex, CancellationToken ct)
+    {
+        int fps = Math.Clamp(maxFps(), 1, 30);
+        long interval = Stopwatch.Frequency / fps;
+
+        long now = Stopwatch.GetTimestamp();
+        if (_tileNextTicks == 0 || now - _tileNextTicks > interval * 4)
+            _tileNextTicks = now;
+        long wait = _tileNextTicks + interval - now;
+        _tileNextTicks += interval;
+        if (wait > 0)
+            await Task.Delay(TimeSpan.FromSeconds((double)wait / Stopwatch.Frequency), ct).ConfigureAwait(false);
+
+        return await Task.Run(() => CaptureTiles(frameIndex), ct).ConfigureAwait(false);
+    }
+
+    private TiledFrame? CaptureTiles(uint frameIndex)
+    {
+        lock (_gate)
+        {
+            Size size = PrimarySize();
+            bool resized = _bitmap is null || _size != size;
+            if (resized)
+            {
+                _bitmap?.Dispose();
+                _bitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppRgb);
+                _size = size;
+                _tileCols = (size.Width + TileSize - 1) / TileSize;
+                _tileRows = (size.Height + TileSize - 1) / TileSize;
+                _tileHashes = new ulong[_tileCols * _tileRows];
+                Array.Fill(_tileHashes, 0UL);
+            }
+
+            try
+            {
+                using Graphics g = Graphics.FromImage(_bitmap!);
+                g.CopyFromScreen(0, 0, 0, 0, size, CopyPixelOperation.SourceCopy);
+            }
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or ExternalException)
+            {
+                // Tela de bloqueio / desktop seguro: mantém o último quadro.
+                return null;
+            }
+
+            var changed = new List<ScreenTile>();
+            BitmapData data = _bitmap!.LockBits(new Rectangle(Point.Empty, size), ImageLockMode.ReadOnly, PixelFormat.Format32bppRgb);
+            try
+            {
+                for (int row = 0; row < _tileRows; row++)
+                {
+                    int ty = row * TileSize;
+                    int th = Math.Min(TileSize, size.Height - ty);
+                    for (int col = 0; col < _tileCols; col++)
+                    {
+                        int tx = col * TileSize;
+                        int tw = Math.Min(TileSize, size.Width - tx);
+                        ulong hash = HashTile(data, tx, ty, tw, th);
+                        int idx = row * _tileCols + col;
+                        if (hash == _tileHashes![idx])
+                            continue;
+                        _tileHashes[idx] = hash;
+                        changed.Add(new ScreenTile(tx, ty, tw, th, default)); // JPEG abaixo (fora do lock de pixels)
+                    }
+                }
+            }
+            finally
+            {
+                _bitmap!.UnlockBits(data);
+            }
+
+            if (changed.Count == 0)
+                return null;
+
+            int quality = Math.Clamp(jpegQuality(), 10, 95);
+            var tiles = new List<ScreenTile>(changed.Count);
+            foreach (ScreenTile t in changed)
+            {
+                using Bitmap crop = _bitmap!.Clone(new Rectangle(t.X, t.Y, t.Width, t.Height), PixelFormat.Format24bppRgb);
+                byte[] jpeg = Encode(crop, quality);
+                tiles.Add(t with { Jpeg = jpeg });
+            }
+
+            // Se o quadro ficou grande demais (ex.: tela inteira mudou em alta qualidade), ainda assim
+            // envia; o limite do protocolo é 8 MiB. Em casos extremos, o Encode do TiledFrame rejeita.
+            return new TiledFrame(frameIndex, size.Width, size.Height, tiles);
+        }
+    }
+
+    /// <summary>FNV-1a sobre uma amostra dos pixels do bloco; detecta mudança sem varrer tudo.</summary>
+    private static ulong HashTile(BitmapData data, int x, int y, int w, int h)
+    {
+        ulong hash = 1469598103934665603UL;
+        unsafe
+        {
+            byte* basePtr = (byte*)data.Scan0;
+            int stride = data.Stride;
+            for (int r = 0; r < h; r++)
+            {
+                byte* rowPtr = basePtr + (long)(y + r) * stride + (long)x * 4;
+                // Amostra alguns bytes por linha (passo 17) para ganhar velocidade.
+                for (int c = 0; c < w * 4; c += 17)
+                {
+                    hash ^= rowPtr[c];
+                    hash *= 1099511628211UL;
+                }
+            }
+        }
+        return hash;
     }
 
     public void Dispose() => Reset();

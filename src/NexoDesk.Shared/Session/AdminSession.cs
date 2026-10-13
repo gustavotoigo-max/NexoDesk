@@ -68,6 +68,7 @@ public sealed class AdminSession : IAsyncDisposable
 
     public event Action<DisplayInfoMessage>? DisplayChanged;
     public event Action<VideoFrame>? FrameReceived;
+    public event Action<TiledFrame>? TilesReceived;
     public event Action<CursorUpdateMessage>? CursorMoved;
     public event Action<TimeSpan>? LatencyMeasured;
 
@@ -172,6 +173,9 @@ public sealed class AdminSession : IAsyncDisposable
                         break;
                     case MessageType.VideoFrame:
                         FrameReceived?.Invoke(VideoFrame.Decode(env));
+                        break;
+                    case MessageType.VideoTiles:
+                        TilesReceived?.Invoke(TiledFrame.Decode(env));
                         break;
                     case MessageType.CursorUpdate:
                         CursorMoved?.Invoke(ProtocolJson.Deserialize<CursorUpdateMessage>(env));

@@ -44,6 +44,16 @@ public interface IFrameSource
     void Reset();
 }
 
+/// <summary>
+/// Produz quadros por regiões (só os retângulos que mudaram). Preferido ao IFrameSource: mantém o
+/// tráfego baixo e a latência curta quando só parte da tela muda. Devolve null se nada mudou.
+/// </summary>
+public interface ITiledFrameSource
+{
+    Task<TiledFrame?> NextTiledFrameAsync(uint frameIndex, CancellationToken ct);
+    void Reset();
+}
+
 /// <summary>Posição do cursor na tela remota, normalizada 0..1. Visible=false quando oculto.</summary>
 public readonly record struct CursorSample(double X, double Y, bool Visible);
 
