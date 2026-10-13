@@ -136,8 +136,8 @@
                             </StackPanel.Style>
                             <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="PAREAR UM ADMIN" />
                             <TextBlock Style="{DynamicResource Nx.Muted}"
-                                       Text="Faça isso uma vez para cada ADMIN. Gere o código e, no ADMIN, clique em Adicionar PC REMOTO e digite o endereço e o código." />
-                            <Button Style="{DynamicResource Nx.Button.Primary}" Content="Gerar código de pareamento" Command="{Binding OpenPairingCommand}"
+                                       Text="Faça isso uma vez para cada ADMIN. Gere o código de acesso e, no ADMIN, clique em Adicionar PC REMOTO e cole este código — ele já leva o endereço junto." />
+                            <Button Style="{DynamicResource Nx.Button.Primary}" Content="Gerar código de acesso" Command="{Binding OpenPairingCommand}"
                                     HorizontalAlignment="Left" Margin="0,16,0,0" />
                         </StackPanel>
 
@@ -153,16 +153,18 @@
                                     </Style.Triggers>
                                 </Style>
                             </StackPanel.Style>
-                            <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="CÓDIGO DE PAREAMENTO" />
+                            <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="CÓDIGO DE ACESSO" />
                             <Border Background="{DynamicResource Nx.BlueSoft}" BorderBrush="{DynamicResource Nx.BlueSelection}" BorderThickness="1" CornerRadius="10" Padding="12,14">
                                 <StackPanel>
-                                    <TextBlock Style="{DynamicResource Nx.BigCode}" Text="{Binding PairingCode}" />
-                                    <TextBlock Text="{Binding PairingRemaining}" FontSize="12" Foreground="{DynamicResource Nx.TextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                    <TextBox Text="{Binding AccessCode, Mode=OneWay}" IsReadOnly="True" BorderThickness="0" Background="Transparent"
+                                             Foreground="{DynamicResource Nx.Text}" FontFamily="{DynamicResource Nx.Mono}" FontSize="13" TextWrapping="Wrap"
+                                             TextAlignment="Center" HorizontalAlignment="Stretch" IsReadOnlyCaretVisible="False" />
+                                    <TextBlock Text="{Binding PairingRemaining}" FontSize="12" Foreground="{DynamicResource Nx.TextMuted}" HorizontalAlignment="Center" Margin="0,8,0,0" />
                                 </StackPanel>
                             </Border>
-                            <TextBlock Style="{DynamicResource Nx.Hint}" Text="Vale uma vez. Passe o código só para quem vai ser ADMIN deste computador." />
+                            <TextBlock Style="{DynamicResource Nx.Hint}" Text="Vale uma vez. Clique em Copiar e cole no ADMIN — já vai com o endereço. Passe só para quem vai acessar este computador." />
                             <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                                <Button Style="{DynamicResource Nx.Button.Small}" Content="Copiar código" Command="{Binding CopyCodeCommand}" Margin="0,0,8,0" />
+                                <Button Style="{DynamicResource Nx.Button.Primary.Small}" Content="Copiar código" Command="{Binding CopyCodeCommand}" Margin="0,0,8,0" />
                                 <Button Style="{DynamicResource Nx.Button.Ghost.Small}" Content="Cancelar" Command="{Binding CancelPairingCommand}" />
                             </StackPanel>
                         </StackPanel>

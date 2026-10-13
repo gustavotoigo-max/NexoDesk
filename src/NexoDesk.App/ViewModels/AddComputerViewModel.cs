@@ -9,15 +9,14 @@ using NexoDesk.Ui;
 
 namespace NexoDesk.App.ViewModels;
 
-/// <summary>Diálogo "Adicionar PC REMOTO": endereço + código mostrado no PC REMOTO.</summary>
+/// <summary>Diálogo "Adicionar PC REMOTO": um único código de acesso (já leva o endereço) colado do PC REMOTO.</summary>
 public sealed class AddComputerViewModel : ObservableObject
 {
     private readonly AppState _state;
     private CancellationTokenSource? _cts;
-    private string _address = "";
-    private string _code = "";
+    private string _accessCode = "";
     private string _name = "";
-    private string _statusText = "No PC REMOTO, abra o NexoDesk e clique em Gerar código de pareamento.";
+    private string _statusText = "No PC REMOTO, clique em Gerar código de acesso e cole o código aqui.";
     private string _statusTag = "Ready";
     private bool _isBusy;
 
@@ -41,22 +40,13 @@ public sealed class AddComputerViewModel : ObservableObject
     /// <summary>Preenchido quando o pareamento dá certo.</summary>
     public PairedComputer? Result { get; private set; }
 
-    public string Address
+    /// <summary>Código único gerado no PC REMOTO (embute endereço, porta e código de pareamento).</summary>
+    public string AccessCode
     {
-        get => _address;
+        get => _accessCode;
         set
         {
-            if (Set(ref _address, value))
-                CommandManager.InvalidateRequerySuggested();
-        }
-    }
-
-    public string Code
-    {
-        get => _code;
-        set
-        {
-            if (Set(ref _code, value))
+            if (Set(ref _accessCode, value))
                 CommandManager.InvalidateRequerySuggested();
         }
     }
@@ -82,12 +72,15 @@ public sealed class AddComputerViewModel : ObservableObject
 
     public string CancelText => IsBusy ? "Parar" : "Cancelar";
 
-    private bool CanPair =>
-        Uri.CheckHostName(Address.Trim()) != UriHostNameType.Unknown && PairingCode.Normalize(Code) is not null;
+    private bool CanPair => NexoDesk.Shared.Pairing.AccessCode.IsValid(AccessCode);
 
     private async Task PairAsync()
     {
-        string host = Address.Trim();
+        if (!NexoDesk.Shared.Pairing.AccessCode.TryParse(AccessCode, out string host, out int port, out string code))
+        {
+            Show("Código de acesso inválido. Copie de novo no PC REMOTO.", "Error");
+            return;
+        }
         if (_state.Config.Admin.Computers.Count >= AppConfig.MaxComputers)
         {
             Show($"O limite é de {AppConfig.MaxComputers} PCs REMOTOS. Remova um antes de adicionar outro.", "Error");
@@ -102,19 +95,21 @@ public sealed class AddComputerViewModel : ObservableObject
             PairedRemote paired = await AdminPairing.PairAsync(new AdminPairOptions
             {
                 Host = host,
+                Port = port,
                 ClientCertificate = _state.Certificate,
                 ClientId = _state.Config.DeviceId,
                 ClientName = _state.Config.DeviceName,
-                Code = Code,
+                Code = code,
                 AppVersion = AppInfo.Version,
             }, _cts.Token);
 
             string displayName = string.IsNullOrWhiteSpace(Name) ? paired.DisplayName : Name.Trim();
             var computer = new PairedComputer
             {
-                Id = UniqueId(paired.ServerId),
+                Id = UniqueId(paired.ServerId, host),
                 Name = displayName,
                 Host = host,
+                Port = port,
                 Sha256 = paired.Fingerprint,
                 PairedAt = DateTimeOffset.UtcNow,
             };
@@ -156,12 +151,12 @@ public sealed class AddComputerViewModel : ObservableObject
         }
     }
 
-    private string UniqueId(string baseId)
+    private string UniqueId(string baseId, string host)
     {
         string id = AppConfig.MakeId(baseId);
         string candidate = id;
         int n = 2;
-        while (_state.Config.Admin.Computers.Any(c => c.Id == candidate && !string.Equals(c.Host, Address.Trim(), StringComparison.OrdinalIgnoreCase)))
+        while (_state.Config.Admin.Computers.Any(c => c.Id == candidate && !string.Equals(c.Host, host, StringComparison.OrdinalIgnoreCase)))
             candidate = $"{id}-{n++}";
         return candidate;
     }

@@ -7,7 +7,7 @@ Dois papéis, um só programa:
 
 O mesmo instalador (`NexoDesk-Setup-x.y.z.exe`) serve para os dois. Na primeira abertura você escolhe o papel daquele computador.
 
-> Nesta versão: pareamento, conexão segura, pedido de permissão, aviso de acesso ativo e registro. A **imagem da tela** chega na próxima etapa (M3).
+> Nesta versão: imagem da tela ao vivo, **controle de mouse e teclado**, pareamento por um único código de acesso, pedido de permissão e atualização pela própria interface. Falta só o acesso com a tela bloqueada/login.
 
 ---
 
@@ -25,10 +25,8 @@ No GitHub do projeto, abra **Releases** e baixe `NexoDesk-Setup-x.y.z.exe`.
 
 1. Rode o instalador (ele pede permissão de administrador do Windows uma vez, para instalar e liberar o firewall só para o Tailscale). Deixe marcado **Abrir o NexoDesk agora**.
 2. Na tela **Como este computador vai ser usado?**, escolha **PC REMOTO**, confira o nome (ex.: *PC Oficina*) e clique em **Continuar**.
-3. A tela do PC REMOTO mostra:
-   - **Endereço deste PC REMOTO** (ex.: `pc-oficina.tail1234.ts.net`) — anote ou clique em **Copiar**;
-   - o selo **Pronto para o ADMIN**.
-4. Clique em **Gerar código de pareamento**. Aparece um código como **K7QM-4XRT-9BWN**, válido por 10 minutos e uma única vez.
+3. Na tela **Como este computador vai ser usado?**, escolha **PC REMOTO**, confira o nome (ex.: *PC Oficina*) e clique em **Continuar**.
+4. Clique em **Gerar código de acesso** e depois em **Copiar código**. Esse código (começa com `NXD1-`) **já leva o endereço junto** e vale 10 minutos, uma vez.
 
 Pode fechar a janela: o NexoDesk continua no ícone perto do relógio e abre sozinho com o Windows.
 
@@ -36,27 +34,23 @@ Pode fechar a janela: o NexoDesk continua no ícone perto do relógio e abre soz
 
 1. Rode o mesmo instalador.
 2. Na primeira tela, escolha **ADMIN**, confira o nome (ex.: *Notebook Gustavo*) e clique em **Continuar**.
-3. Clique em **Adicionar PC REMOTO** e preencha:
-   - **Endereço**: o que apareceu no PC REMOTO;
-   - **Código**: o código de pareamento que está na tela do PC REMOTO.
-4. Clique em **Parear**. O PC REMOTO entra na lista como **Disponível**.
+3. Clique em **Adicionar PC REMOTO**, cole o **código de acesso** no único campo e clique em **Parear**.
 
-O pareamento é feito uma vez só por par ADMIN ↔ PC REMOTO.
+O PC REMOTO entra na lista como **Disponível**. O pareamento é feito uma vez só por par ADMIN ↔ PC REMOTO.
 
 ## 5. Primeiro acesso
 
-1. No ADMIN, clique em **Conectar** ao lado do PC REMOTO.
+1. No ADMIN, deixe o modo em **Controlar** (padrão) e clique em **Conectar**.
 2. No PC REMOTO aparece **Permitir acesso remoto?** (30 segundos). Quem estiver lá clica em **Permitir**.
-3. No PC REMOTO, uma faixa fica no topo da tela: **Acesso remoto ativo · ADMIN … · Encerrar acesso**.
-4. No ADMIN abre a janela do acesso, com a conexão segura confirmada e a latência.
-5. Para terminar: **Desconectar** no ADMIN ou **Encerrar acesso** no PC REMOTO.
+3. No ADMIN abre a janela do acesso: você vê a tela e **comanda com mouse e teclado**. No PC REMOTO, um aviso aparece no topo por 1 minuto (com botão **Esconder**).
+4. Para terminar: **Desconectar** no ADMIN ou **Encerrar acesso** no PC REMOTO.
 
 ## 6. No dia a dia
 
 | Quero… | Onde |
 |---|---|
-| Acessar outro PC REMOTO (até 5) | No PC novo: instalar, escolher PC REMOTO, gerar código. No ADMIN: **Adicionar PC REMOTO** |
-| Ter mais de um ADMIN | No ADMIN novo: instalar, escolher ADMIN. No PC REMOTO: **Gerar código** de novo e parear |
+| Acessar outro PC REMOTO (até 5) | No PC novo: instalar, escolher PC REMOTO, **Gerar código de acesso**. No ADMIN: **Adicionar PC REMOTO** e colar |
+| Ter mais de um ADMIN | No ADMIN novo: instalar, escolher ADMIN. No PC REMOTO: **Gerar código de acesso** de novo |
 | Tirar o acesso de um ADMIN | PC REMOTO → **ADMINS que podem acessar** → **Remover** |
 | Tirar um PC da lista do ADMIN | ADMIN → **Remover** na linha do PC REMOTO |
 | Não pedir **Permitir** a cada acesso | PC REMOTO → **Opções** → **Permitir acesso sem confirmação** (o aviso no topo continua aparecendo) |

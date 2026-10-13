@@ -9,7 +9,7 @@ Um único programa e **um único instalador** para os dois: na primeira abertura
 
 Interface no padrão **Nexotool UI** (barra azul-marinho, linha em degradê, cartões, tema claro/escuro automático).
 
-> Estado (v0.3.0): pareamento, conexão segura com autenticação mútua, pedido de permissão, aviso de acesso ativo, registro e instalador. A imagem da tela chega no M3. Plano: [`docs/plano-desenvolvimento.md`](docs/plano-desenvolvimento.md).
+> Estado: imagem da tela ao vivo, controle de mouse e teclado, pareamento por código de acesso único, permissão, atualização pela interface e instalador. Falta o acesso com a tela bloqueada/login. Plano: [`docs/plano-desenvolvimento.md`](docs/plano-desenvolvimento.md).
 
 ## Instalar e usar
 
@@ -17,9 +17,9 @@ Passo a passo: **[docs/tutorial.md](docs/tutorial.md)**. Resumo:
 
 1. Tailscale conectado nos dois computadores.
 2. Baixe `NexoDesk-Setup-x.y.z.exe` em **Releases** e instale nos dois.
-3. **PC REMOTO:** escolha *PC REMOTO* → **Gerar código de pareamento**.
-4. **ADMIN:** escolha *ADMIN* → **Adicionar PC REMOTO** → endereço + código → **Parear**.
-5. **ADMIN:** **Conectar**. **PC REMOTO:** **Permitir**.
+3. **PC REMOTO:** escolha *PC REMOTO* → **Gerar código de acesso** → **Copiar** (o código já leva o endereço).
+4. **ADMIN:** escolha *ADMIN* → **Adicionar PC REMOTO** → cole o código → **Parear**.
+5. **ADMIN:** modo **Controlar** → **Conectar**. **PC REMOTO:** **Permitir**.
 
 ## Compilar
 

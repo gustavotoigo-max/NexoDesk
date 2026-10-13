@@ -45,6 +45,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
     private string _ipText = "—";
     private string _tailscaleText = "verificando…";
     private string? _pairingCode;
+    private string? _accessCode;
     private string _pairingRemaining = "";
     private string? _sessionAdmin;
     private string? _sessionDetail;
@@ -61,7 +62,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
         OpenPairingCommand = new RelayCommand(OpenPairing, () => Status is RemoteStatus.Listening or RemoteStatus.InSession);
         CancelPairingCommand = new RelayCommand(() => _pairing.Close(), () => PairingActive);
         CopyAddressCommand = new RelayCommand(() => CopyToClipboard(Address), () => Status != RemoteStatus.Starting);
-        CopyCodeCommand = new RelayCommand(() => CopyToClipboard(PairingCode ?? ""), () => PairingActive);
+        CopyCodeCommand = new RelayCommand(() => CopyToClipboard(AccessCode ?? ""), () => PairingActive);
         RemoveAdminCommand = new RelayCommand(p => { if (p is AdminRow row) RemoveAdmin(row); });
         EndSessionCommand = new RelayCommand(EndSession, () => HasSession);
         RestartCommand = new AsyncRelayCommand(RestartAsync);
@@ -152,6 +153,9 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
     }
 
     public bool PairingActive => PairingCode is not null;
+
+    /// <summary>Código único de acesso (endereço + código) que o ADMIN cola em um só campo.</summary>
+    public string? AccessCode { get => _accessCode; private set => Set(ref _accessCode, value); }
     public string PairingRemaining { get => _pairingRemaining; private set => Set(ref _pairingRemaining, value); }
 
     public bool HasAdmins => Admins.Count > 0;
@@ -328,10 +332,12 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
 
     private void OpenPairing()
     {
-        PairingCode = _pairing.Open(PairingValidity);
+        string raw = _pairing.Open(PairingValidity);
+        PairingCode = raw;
+        AccessCode = NexoDesk.Shared.Pairing.AccessCode.Create(Address, _state.Config.Remote.Port, NexoDesk.Shared.Pairing.PairingCode.Normalize(raw)!);
         UpdatePairingRemaining();
         _pairingTimer.Start();
-        AddLog(LogLevel.Info, "Código de pareamento gerado (vale 10 minutos, uma vez).");
+        AddLog(LogLevel.Info, "Código de acesso gerado (vale 10 minutos, uma vez).");
     }
 
     private void OnPairingChanged()
@@ -339,6 +345,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
         if (_pairing.IsOpen)
             return;
         PairingCode = null;
+        AccessCode = null;
         PairingRemaining = "";
         _pairingTimer.Stop();
         LoadAdmins();

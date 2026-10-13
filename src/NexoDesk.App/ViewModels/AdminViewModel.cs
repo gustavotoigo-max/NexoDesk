@@ -27,7 +27,7 @@ public sealed class AdminViewModel : ObservableObject
     private string _statusText = "Pronto.";
     private string _statusTag = "Ready";
     private bool _isConnecting;
-    private bool _controlMode;
+    private bool _controlMode = true;
 
     public AdminViewModel(AppState state)
     {

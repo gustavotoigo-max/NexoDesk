@@ -136,7 +136,7 @@
                                 </StackPanel>
                             </Border>
                             <TextBlock Style="{DynamicResource Nx.Hint}" VerticalAlignment="Center" Margin="12,0,0,0"
-                                       Text="Controlar (mouse e teclado) chega numa próxima versão." />
+                                       Text="No modo Controlar, seu mouse e teclado comandam o PC REMOTO. Em Ver a tela, você só observa." />
                         </StackPanel>
                     </Grid>
 

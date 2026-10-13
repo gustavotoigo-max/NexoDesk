@@ -32,23 +32,16 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <TextBlock Style="{DynamicResource Nx.FieldLabel}" Text="Endereço" VerticalAlignment="Top" Margin="0,9,0,0" />
+            <TextBlock Style="{DynamicResource Nx.FieldLabel}" Text="Código de acesso" VerticalAlignment="Top" Margin="0,9,0,0" />
             <StackPanel Grid.Column="1" Margin="0,0,0,14">
-                <TextBox x:Name="AddressBox" Style="{DynamicResource Nx.Input.Mono}" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" />
-                <TextBlock Style="{DynamicResource Nx.Hint}" Text="Como aparece no PC REMOTO, em Endereço deste PC REMOTO. Ex.: pc-oficina.tail1234.ts.net ou 100.101.102.103" />
+                <TextBox x:Name="AddressBox" Style="{DynamicResource Nx.Input.Mono}" Text="{Binding AccessCode, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" MinHeight="48" AcceptsReturn="False" VerticalContentAlignment="Top" />
+                <TextBlock Style="{DynamicResource Nx.Hint}" Text="Cole o código gerado no PC REMOTO (começa com NXD1-). Ele já leva o endereço junto. Vale 10 minutos e uma única vez." />
             </StackPanel>
 
-            <TextBlock Grid.Row="1" Style="{DynamicResource Nx.FieldLabel}" Text="Código" VerticalAlignment="Top" Margin="0,9,0,0" />
-            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,14">
-                <TextBox Style="{DynamicResource Nx.Input.Mono}" Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}" CharacterCasing="Upper" MaxLength="16" FontSize="15" />
-                <TextBlock Style="{DynamicResource Nx.Hint}" Text="12 letras e números, como K7QM-4XRT-9BWN. Vale 10 minutos e uma única vez." />
-            </StackPanel>
-
-            <TextBlock Grid.Row="2" Style="{DynamicResource Nx.FieldLabel}" Text="Nome (opcional)" VerticalAlignment="Top" Margin="0,9,0,0" />
-            <StackPanel Grid.Row="2" Grid.Column="1">
+            <TextBlock Grid.Row="1" Style="{DynamicResource Nx.FieldLabel}" Text="Nome (opcional)" VerticalAlignment="Top" Margin="0,9,0,0" />
+            <StackPanel Grid.Row="1" Grid.Column="1">
                 <TextBox Style="{DynamicResource Nx.Input}" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" MaxLength="64" />
                 <TextBlock Style="{DynamicResource Nx.Hint}" Text="Em branco, usa o nome que o PC REMOTO informar." />
             </StackPanel>

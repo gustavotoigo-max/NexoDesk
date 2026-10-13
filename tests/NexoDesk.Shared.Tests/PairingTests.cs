@@ -103,3 +103,54 @@ public class PairingTests
         Assert.Equal(2, changes);
     }
 }
+
+public class AccessCodeTests
+{
+    [Fact]
+    public void RoundTrip_CarriesHostPortAndCode()
+    {
+        string code = NexoDesk.Shared.Pairing.PairingCode.Normalize(NexoDesk.Shared.Pairing.PairingCode.Generate())!;
+        string token = NexoDesk.Shared.Pairing.AccessCode.Create("pc-oficina.tail1234.ts.net", 47115, code);
+
+        Assert.StartsWith("NXD1-", token);
+        Assert.True(NexoDesk.Shared.Pairing.AccessCode.TryParse(token, out string host, out int port, out string back));
+        Assert.Equal("pc-oficina.tail1234.ts.net", host);
+        Assert.Equal(47115, port);
+        Assert.Equal(code, back);
+    }
+
+    [Fact]
+    public void TryParse_AcceptsWhitespaceAndMissingPrefix()
+    {
+        string code = new string('A', 12);
+        string token = NexoDesk.Shared.Pairing.AccessCode.Create("100.101.102.103", 50000, code);
+        string messy = "  " + token + "\n";
+        Assert.True(NexoDesk.Shared.Pairing.AccessCode.TryParse(messy, out string host, out int port, out _));
+        Assert.Equal("100.101.102.103", host);
+        Assert.Equal(50000, port);
+
+        // Sem o prefixo também vale.
+        string noPrefix = token.Substring("NXD1-".Length);
+        Assert.True(NexoDesk.Shared.Pairing.AccessCode.TryParse(noPrefix, out _, out _, out _));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("qualquer coisa")]
+    [InlineData("NXD1-###")]
+    public void TryParse_RejectsInvalid(string token)
+    {
+        Assert.False(NexoDesk.Shared.Pairing.AccessCode.TryParse(token, out _, out _, out _));
+    }
+
+    [Fact]
+    public void TryParse_RejectsBadHostOrCode()
+    {
+        // host inválido
+        string bad = "NXD1-" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("host com espaço|47115|AAAAAAAAAAAA")).TrimEnd('=').Replace('+','-').Replace('/','_');
+        Assert.False(NexoDesk.Shared.Pairing.AccessCode.TryParse(bad, out _, out _, out _));
+        // código inválido (tamanho errado)
+        string badCode = "NXD1-" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("pc.ts.net|47115|ABC")).TrimEnd('=').Replace('+','-').Replace('/','_');
+        Assert.False(NexoDesk.Shared.Pairing.AccessCode.TryParse(badCode, out _, out _, out _));
+    }
+}
