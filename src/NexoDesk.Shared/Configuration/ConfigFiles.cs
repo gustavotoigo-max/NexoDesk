@@ -44,7 +44,7 @@ public sealed record RemoteSettings
     public int ConsentTimeoutSeconds { get; set; } = 30;
     public bool StartWithWindows { get; set; } = true;
     public int MaxFps { get; set; } = 18;
-    public int JpegQuality { get; set; } = 85;
+    public int JpegQuality { get; set; } = 88;
 
     /// <summary>"auto" (IP Tailscale) ou um IP. 0.0.0.0/:: nunca são aceitos.</summary>
     public string ListenAddress { get; set; } = "auto";
@@ -168,12 +168,26 @@ public static class ConfigStore
     {
         try
         {
-            return JsonSerializer.Deserialize(json, ConfigJsonContext.Default.AppConfig) ?? throw new ConfigException("Configuração vazia.");
+            AppConfig config = JsonSerializer.Deserialize(json, ConfigJsonContext.Default.AppConfig) ?? throw new ConfigException("Configuração vazia.");
+            Migrate(config);
+            return config;
         }
         catch (JsonException ex)
         {
             throw new ConfigException($"Configuração com JSON inválido: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Ajusta configurações antigas ao abrir. Versões iniciais salvaram qualidade/FPS baixos (não havia
+    /// controle na interface); sobe esses valores legados uma vez para a imagem ficar mais nítida.
+    /// </summary>
+    private static void Migrate(AppConfig config)
+    {
+        if (config.Remote.JpegQuality <= 70)
+            config.Remote.JpegQuality = 88;
+        if (config.Remote.MaxFps <= 12)
+            config.Remote.MaxFps = 18;
     }
 
     public static string Serialize(AppConfig config) => JsonSerializer.Serialize(config, ConfigJsonContext.Default.AppConfig);

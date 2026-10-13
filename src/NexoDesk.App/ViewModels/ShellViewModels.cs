@@ -234,6 +234,15 @@ public sealed class SettingsViewModel : ObservableObject
             }
         });
         OpenDataFolderCommand = new RelayCommand(() => AppPaths.Open(AppPaths.DataDirectory));
+        SetAccentCommand = new RelayCommand(p =>
+        {
+            if (p is string s && Enum.TryParse(s, out NxAccent accent))
+            {
+                ThemeManager.ApplyAccent(accent);
+                foreach (NxAccent a in Enum.GetValues<NxAccent>())
+                    OnPropertyChanged($"Accent{a}");
+            }
+        });
     }
 
     public UpdateViewModel Update { get; }
@@ -241,7 +250,14 @@ public sealed class SettingsViewModel : ObservableObject
     public ICommand SaveNameCommand { get; }
     public ICommand SwitchRoleCommand { get; }
     public ICommand SetThemeCommand { get; }
+    public ICommand SetAccentCommand { get; }
     public ICommand OpenDataFolderCommand { get; }
+
+    public bool AccentAzul => ThemeManager.Accent == NxAccent.Azul;
+    public bool AccentEsmeralda => ThemeManager.Accent == NxAccent.Esmeralda;
+    public bool AccentVioleta => ThemeManager.Accent == NxAccent.Violeta;
+    public bool AccentGrafite => ThemeManager.Accent == NxAccent.Grafite;
+    public bool AccentAmbar => ThemeManager.Accent == NxAccent.Ambar;
 
     public string DeviceName
     {

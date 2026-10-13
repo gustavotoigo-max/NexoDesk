@@ -44,4 +44,9 @@
     <FontFamily x:Key="Nx.Mono">Cascadia Mono, Consolas</FontFamily>
     <FontFamily x:Key="Nx.Icons">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
+    <!-- Raios de canto (Nexotool UI): cantos discretos, não muito arredondados. -->
+    <CornerRadius x:Key="Nx.Radius.Card">6</CornerRadius>
+    <CornerRadius x:Key="Nx.Radius.Button">5</CornerRadius>
+    <CornerRadius x:Key="Nx.Radius.Control">4</CornerRadius>
+
 </ResourceDictionary>

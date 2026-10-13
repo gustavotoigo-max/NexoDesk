@@ -1,0 +1,18 @@
+<!-- Nexotool UI — acento de cor "Ambar". Sobrepõe as cores de destaque (carregado após o tema). -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="Nx.Navy" Color="#2A1A05" />
+    <SolidColorBrush x:Key="Nx.Navy2" Color="#3A2608" />
+    <SolidColorBrush x:Key="Nx.Navy3" Color="#50340C" />
+    <SolidColorBrush x:Key="Nx.Cyan" Color="#FBBF24" />
+    <SolidColorBrush x:Key="Nx.Blue" Color="#D97706" />
+    <SolidColorBrush x:Key="Nx.BlueHover" Color="#B45309" />
+    <SolidColorBrush x:Key="Nx.BluePressed" Color="#92400E" />
+    <!-- Tons suaves translúcidos: adaptam-se ao fundo claro ou escuro. -->
+    <SolidColorBrush x:Key="Nx.BlueSoft" Color="#D97706" Opacity="0.14" />
+    <SolidColorBrush x:Key="Nx.BlueSelection" Color="#D97706" Opacity="0.26" />
+    <LinearGradientBrush x:Key="Nx.AccentGradient" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Offset="0" Color="#D97706" />
+        <GradientStop Offset="1" Color="#FBBF24" />
+    </LinearGradientBrush>
+</ResourceDictionary>

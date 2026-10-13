@@ -15,7 +15,7 @@
         UseLayoutRounding="True">
 
     <!-- Margem para a sombra; o cartão em si tem 460 px como no guia -->
-    <Border Margin="16" CornerRadius="10" Background="{DynamicResource Nx.Surface}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
+    <Border Margin="16" CornerRadius="6" Background="{DynamicResource Nx.Surface}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
         <Border.Effect>
             <DropShadowEffect BlurRadius="24" ShadowDepth="8" Direction="270" Opacity="0.22" Color="#0B1733" />
         </Border.Effect>
@@ -42,7 +42,7 @@
             </Grid>
 
             <Border Grid.Row="1" Background="{DynamicResource Nx.SurfaceAlt}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="0,1,0,0"
-                    Padding="24,14" CornerRadius="0,0,10,10">
+                    Padding="24,14" CornerRadius="0,0,6,6">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="SecondaryButton" Style="{DynamicResource Nx.Button}" Margin="0,0,10,0" IsCancel="True" Click="OnSecondary" />
                     <Button x:Name="PrimaryButton" Style="{DynamicResource Nx.Button.Primary}" IsDefault="True" Click="OnPrimary" />

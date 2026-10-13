@@ -18,7 +18,7 @@
         UseLayoutRounding="True"
         Title="NexoDesk — acesso remoto ativo">
 
-    <Border Margin="12" CornerRadius="10" Background="{DynamicResource Nx.Navy}" BorderBrush="{DynamicResource Nx.Navy3}" BorderThickness="1">
+    <Border Margin="12" CornerRadius="6" Background="{DynamicResource Nx.Navy}" BorderBrush="{DynamicResource Nx.Navy3}" BorderThickness="1">
         <Border.Effect>
             <DropShadowEffect BlurRadius="20" ShadowDepth="6" Direction="270" Opacity="0.35" Color="#000000" />
         </Border.Effect>

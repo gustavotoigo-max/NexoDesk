@@ -13,17 +13,29 @@ public enum NxThemeMode
     Dark,
 }
 
+/// <summary>Acento de cor do Nexotool UI (barra, degradê, botões, destaque).</summary>
+public enum NxAccent
+{
+    Azul,
+    Esmeralda,
+    Violeta,
+    Grafite,
+    Ambar,
+}
+
 /// <summary>
-/// Instala o Nexotool UI no aplicativo e troca entre claro e escuro em tempo de execução.
-/// A escolha é salva em %AppData%\Nexotool\ui.json e vale para todos os aplicativos Nexotool.
+/// Instala o Nexotool UI no aplicativo e troca entre claro/escuro e entre acentos de cor em tempo
+/// de execução. A escolha é salva em %AppData%\Nexotool\ui.json e vale para todos os apps Nexotool.
 /// </summary>
 public static class ThemeManager
 {
     private const string Base = "pack://application:,,,/NexoDesk.Ui;component/Themes/";
     private static ResourceDictionary? _themeSlot;
+    private static ResourceDictionary? _accentSlot;
     private static bool _listening;
 
     public static NxThemeMode Mode { get; private set; } = NxThemeMode.Auto;
+    public static NxAccent Accent { get; private set; } = NxAccent.Azul;
 
     /// <summary>Tema efetivo depois de resolver "Automático".</summary>
     public static bool IsDark { get; private set; }
@@ -37,13 +49,19 @@ public static class ThemeManager
     public static void Install(Application app)
     {
         ArgumentNullException.ThrowIfNull(app);
+        (NxThemeMode savedMode, NxAccent savedAccent) = LoadSaved();
+
         var dictionaries = app.Resources.MergedDictionaries;
         dictionaries.Add(new ResourceDictionary { Source = new Uri(Base + "Brand.xaml", UriKind.Absolute) });
         _themeSlot = new ResourceDictionary { Source = new Uri(Base + "Light.xaml", UriKind.Absolute) };
         dictionaries.Add(_themeSlot);
+        // Acento depois do tema (sobrepõe as cores de destaque) e antes dos controles.
+        _accentSlot = new ResourceDictionary { Source = new Uri(Base + $"Accents/{savedAccent}.xaml", UriKind.Absolute) };
+        dictionaries.Add(_accentSlot);
+        Accent = savedAccent;
         dictionaries.Add(new ResourceDictionary { Source = new Uri(Base + "Controls.xaml", UriKind.Absolute) });
 
-        Apply(LoadSavedMode(), save: false);
+        Apply(savedMode, save: false);
 
         if (!_listening)
         {
@@ -80,7 +98,28 @@ public static class ThemeManager
 
         IsDark = dark;
         if (save)
-            SaveMode(mode);
+            SaveSettings();
+        ThemeChanged?.Invoke();
+    }
+
+    /// <summary>Troca o acento de cor em tempo de execução.</summary>
+    public static void ApplyAccent(NxAccent accent, bool save = true)
+    {
+        Accent = accent;
+        if (_accentSlot is not null && Application.Current is { } app)
+        {
+            var dictionaries = app.Resources.MergedDictionaries;
+            int index = dictionaries.IndexOf(_accentSlot);
+            var next = new ResourceDictionary { Source = new Uri(Base + $"Accents/{accent}.xaml", UriKind.Absolute) };
+            if (index >= 0)
+                dictionaries[index] = next;
+            else
+                dictionaries.Add(next);
+            _accentSlot = next;
+        }
+
+        if (save)
+            SaveSettings();
         ThemeChanged?.Invoke();
     }
 
@@ -98,29 +137,35 @@ public static class ThemeManager
         }
     }
 
-    private static NxThemeMode LoadSavedMode()
+    private static (NxThemeMode, NxAccent) LoadSaved()
     {
+        NxThemeMode mode = NxThemeMode.Auto;
+        NxAccent accent = NxAccent.Azul;
         try
         {
-            if (!File.Exists(SettingsPath))
-                return NxThemeMode.Auto;
-            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(SettingsPath));
-            if (doc.RootElement.TryGetProperty("theme", out JsonElement theme)
-                && Enum.TryParse(theme.GetString(), ignoreCase: true, out NxThemeMode mode))
-                return mode;
+            if (File.Exists(SettingsPath))
+            {
+                using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(SettingsPath));
+                if (doc.RootElement.TryGetProperty("theme", out JsonElement t)
+                    && Enum.TryParse(t.GetString(), ignoreCase: true, out NxThemeMode m))
+                    mode = m;
+                if (doc.RootElement.TryGetProperty("accent", out JsonElement a)
+                    && Enum.TryParse(a.GetString(), ignoreCase: true, out NxAccent ac))
+                    accent = ac;
+            }
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
         }
-        return NxThemeMode.Auto;
+        return (mode, accent);
     }
 
-    private static void SaveMode(NxThemeMode mode)
+    private static void SaveSettings()
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
-            File.WriteAllText(SettingsPath, $"{{\n  \"theme\": \"{mode}\"\n}}\n");
+            File.WriteAllText(SettingsPath, $"{{\n  \"theme\": \"{Mode}\",\n  \"accent\": \"{Accent}\"\n}}\n");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

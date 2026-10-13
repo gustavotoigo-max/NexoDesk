@@ -53,7 +53,7 @@
         </Canvas>
 
         <!-- Aviso: conectado em "Só ver" (mouse/teclado não comandam) -->
-        <Border VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,12,0,0" CornerRadius="10" Padding="16,8"
+        <Border VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,12,0,0" CornerRadius="6" Padding="16,8"
                 Background="{DynamicResource Nx.WarningSoft}" BorderBrush="{DynamicResource Nx.WarningBorder}" BorderThickness="1">
             <Border.Visibility>
                 <Binding Path="ViewOnly" Converter="{StaticResource BoolToVisibility}" />

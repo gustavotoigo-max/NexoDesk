@@ -70,6 +70,28 @@
                         </StackPanel>
                     </Border>
                 </Grid>
+
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Style="{DynamicResource Nx.FieldLabel}" Text="Cor" />
+                    <Border Grid.Column="1" Style="{DynamicResource Nx.Segmented}">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Accent" Content="Azul"
+                                         IsChecked="{Binding AccentAzul, Mode=OneWay}" Command="{Binding SetAccentCommand}" CommandParameter="Azul" />
+                            <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Accent" Content="Esmeralda"
+                                         IsChecked="{Binding AccentEsmeralda, Mode=OneWay}" Command="{Binding SetAccentCommand}" CommandParameter="Esmeralda" />
+                            <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Accent" Content="Violeta"
+                                         IsChecked="{Binding AccentVioleta, Mode=OneWay}" Command="{Binding SetAccentCommand}" CommandParameter="Violeta" />
+                            <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Accent" Content="Grafite"
+                                         IsChecked="{Binding AccentGrafite, Mode=OneWay}" Command="{Binding SetAccentCommand}" CommandParameter="Grafite" />
+                            <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Accent" Content="Âmbar" Margin="0"
+                                         IsChecked="{Binding AccentAmbar, Mode=OneWay}" Command="{Binding SetAccentCommand}" CommandParameter="Ambar" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </StackPanel>
         </Border>
 

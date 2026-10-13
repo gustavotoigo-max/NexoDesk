@@ -58,8 +58,12 @@ public partial class SessionWindow : NxWindow
         double offsetX = (containerW - contentW) / 2;
         double offsetY = (containerH - contentH) / 2;
 
-        Canvas.SetLeft(CursorArrow, offsetX + _vm.CursorX * contentW);
-        Canvas.SetTop(CursorArrow, offsetY + _vm.CursorY * contentH);
+        // Ponto na área da IMAGEM e, em seguida, convertido para o espaço do Canvas — robusto a
+        // qualquer diferença de origem entre os dois (era a causa do deslocamento lateral).
+        var inImage = new Point(offsetX + _vm.CursorX * contentW, offsetY + _vm.CursorY * contentH);
+        Point inCanvas = RemoteImage.TranslatePoint(inImage, CursorLayer);
+        Canvas.SetLeft(CursorArrow, inCanvas.X);
+        Canvas.SetTop(CursorArrow, inCanvas.Y);
         CursorArrow.Visibility = Visibility.Visible;
     }
 

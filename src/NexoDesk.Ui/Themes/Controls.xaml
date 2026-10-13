@@ -101,7 +101,7 @@
         <Setter Property="Background" Value="{DynamicResource Nx.Surface}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Nx.Border}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="CornerRadius" Value="{StaticResource Nx.Radius.Card}" />
         <Setter Property="Padding" Value="20" />
     </Style>
     <Style x:Key="Nx.Card.Compact" TargetType="Border" BasedOn="{StaticResource Nx.Card}">
@@ -111,7 +111,7 @@
     <!-- Log: fundo azul-marinho, fonte mono 12 px -->
     <Style x:Key="Nx.Log" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource Nx.Navy}" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="{StaticResource Nx.Radius.Card}" />
         <Setter Property="Padding" Value="14,12" />
         <Setter Property="TextElement.Foreground" Value="{DynamicResource Nx.LogText}" />
         <Setter Property="TextElement.FontFamily" Value="{DynamicResource Nx.Mono}" />
@@ -123,7 +123,7 @@
         <Setter Property="Background" Value="{DynamicResource Nx.InfoSoft}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Nx.InfoBorder}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="{StaticResource Nx.Radius.Card}" />
         <Setter Property="Padding" Value="16,12" />
     </Style>
     <Style x:Key="Nx.Alert.Success" TargetType="Border" BasedOn="{StaticResource Nx.Alert}">
@@ -173,7 +173,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="8"
+                            CornerRadius="{StaticResource Nx.Radius.Button}"
                             SnapsToDevicePixels="True">
                         <ContentPresenter Margin="{TemplateBinding Padding}"
                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -376,7 +376,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="8"
+                            CornerRadius="{StaticResource Nx.Radius.Control}"
                             SnapsToDevicePixels="True">
                         <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Focusable="False" />
                     </Border>
@@ -479,7 +479,7 @@
         <Setter Property="Background" Value="{DynamicResource Nx.SurfaceAlt}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Nx.Border}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="{StaticResource Nx.Radius.Card}" />
         <Setter Property="Padding" Value="3" />
         <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
@@ -495,7 +495,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="Pill" CornerRadius="7" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="Pill" CornerRadius="{StaticResource Nx.Radius.Control}" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
                         <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" RecognizesAccessKey="True" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -749,7 +749,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
                     <Border x:Name="Card" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="1.5" CornerRadius="12" Padding="{TemplateBinding Padding}">
+                            BorderThickness="1.5" CornerRadius="{StaticResource Nx.Radius.Card}" Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
                     </Border>
                     <ControlTemplate.Triggers>

@@ -92,7 +92,7 @@
                     <StackPanel>
                         <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="ENDEREÇO DESTE PC REMOTO" />
                         <TextBlock Style="{DynamicResource Nx.Muted}" Text="O ADMIN digita este endereço ao adicionar este computador." />
-                        <Border Background="{DynamicResource Nx.SurfaceAlt}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,12,0,10">
+                        <Border Background="{DynamicResource Nx.SurfaceAlt}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1" CornerRadius="6" Padding="14,12" Margin="0,12,0,10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -154,7 +154,7 @@
                                 </Style>
                             </StackPanel.Style>
                             <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="CÓDIGO DE ACESSO" />
-                            <Border Background="{DynamicResource Nx.BlueSoft}" BorderBrush="{DynamicResource Nx.BlueSelection}" BorderThickness="1" CornerRadius="10" Padding="12,14">
+                            <Border Background="{DynamicResource Nx.BlueSoft}" BorderBrush="{DynamicResource Nx.BlueSelection}" BorderThickness="1" CornerRadius="6" Padding="12,14">
                                 <StackPanel>
                                     <TextBox Text="{Binding AccessCode, Mode=OneWay}" IsReadOnly="True" BorderThickness="0" Background="Transparent"
                                              Foreground="{DynamicResource Nx.Text}" FontFamily="{DynamicResource Nx.Mono}" FontSize="13" TextWrapping="Wrap"
@@ -176,7 +176,7 @@
             <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="ADMINS QUE PODEM ACESSAR ESTE COMPUTADOR" />
-                    <Border CornerRadius="10" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
+                    <Border CornerRadius="6" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Style.Triggers>
@@ -223,8 +223,27 @@
                     <CheckBox Style="{DynamicResource Nx.Switch}" IsChecked="{Binding StartWithWindows}" Content="Abrir o NexoDesk junto com o Windows (recomendado)" />
                     <TextBlock Style="{DynamicResource Nx.Hint}" Margin="46,4,0,14" Text="Sem isso, o ADMIN só consegue acessar depois que alguém abrir o NexoDesk aqui." />
                     <CheckBox Style="{DynamicResource Nx.Switch}" IsChecked="{Binding UnattendedAccess}" Content="Permitir acesso sem confirmação" />
-                    <TextBlock Style="{DynamicResource Nx.Hint}" Margin="46,4,0,0"
+                    <TextBlock Style="{DynamicResource Nx.Hint}" Margin="46,4,0,16"
                                Text="Desligado (padrão): cada acesso pede Permitir neste computador. Ligado: o ADMIN pareado entra direto; o aviso no topo da tela continua aparecendo." />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{DynamicResource Nx.FieldLabel}" Text="Qualidade da imagem" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Border Style="{DynamicResource Nx.Segmented}">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Quality" Content="Normal" IsChecked="{Binding QualityNormal}" />
+                                    <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Quality" Content="Alta" IsChecked="{Binding QualityAlta}" />
+                                    <RadioButton Style="{DynamicResource Nx.SegmentedItem}" GroupName="Quality" Content="Máxima" IsChecked="{Binding QualityMaxima}" Margin="0" />
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Style="{DynamicResource Nx.Hint}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                       Text="Mais qualidade = texto mais nítido e um pouco mais de dados pela rede." />
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </Border>
 
