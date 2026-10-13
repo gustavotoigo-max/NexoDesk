@@ -57,11 +57,11 @@ public sealed class H264Encoder : IDisposable
                 return null;
             var mft = new IMFTransform(ptr);
 
-            // Baixa latência: desliga B-frames e reduz o buffer — menos atraso (chave para resposta).
+            // Baixa latência: desliga B-frames e reduz o buffer — principal ganho de tempo de resposta.
             try
             {
-                using IMFAttributes attrs = mft.GetAttributes();
-                attrs.SetUInt32(MF_LOW_LATENCY, 1);
+                using IMFAttributes attrs = mft.Attributes;
+                attrs.Set(MF_LOW_LATENCY, true);
             }
             catch (Exception) { }
 
