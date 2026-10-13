@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using NexoDesk.App.Services;
+using NexoDesk.Desktop;
 using NexoDesk.Shared.Audit;
 using NexoDesk.Shared.Configuration;
 using NexoDesk.Shared.Messages;

@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using NexoDesk.Shared.Messages;
 using NexoDesk.Shared.Session;
 
-namespace NexoDesk.App.Services;
+namespace NexoDesk.Desktop;
 
 /// <summary>
 /// Captura a tela do PC REMOTO com GDI (CopyFromScreen) e envia como JPEG. Funciona na sessão do usuário

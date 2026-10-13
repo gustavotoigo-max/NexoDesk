@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using NexoDesk.Shared.Messages;
 using NexoDesk.Shared.Session;
 
-namespace NexoDesk.App.Services;
+namespace NexoDesk.Desktop;
 
 /// <summary>
 /// Aplica mouse e teclado no PC REMOTO com SendInput. O mouse usa coordenadas normalizadas (0..1)
