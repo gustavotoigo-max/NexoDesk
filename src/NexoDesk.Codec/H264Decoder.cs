@@ -164,7 +164,7 @@ public sealed class H264Decoder : IDisposable
             catch (Exception) { return; }
             try
             {
-                Guid subtype = type.GetGuid(MediaTypeAttributeKeys.Subtype);
+                Guid subtype = type.GetGUID(MediaTypeAttributeKeys.Subtype);
                 if (subtype == VideoFormatGuids.NV12)
                 {
                     ulong size = type.GetUInt64(MediaTypeAttributeKeys.FrameSize);
