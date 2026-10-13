@@ -1,6 +1,6 @@
 # NexoDesk
 
-Acesso remoto privado para 2 a 5 computadores Windows da empresa, pela rede **Tailscale**, sem abrir portas no roteador. Um **Admin** vê (e, a partir do M5, controla) a tela de um PC onde roda o **Agent**, com autenticação mútua por certificado, consentimento local e auditoria.
+Acesso remoto privado para 2 a 5 computadores Windows da empresa, pela rede **Tailscale**, sem abrir portas no roteador. O **PC admin** vê (e, a partir do M5, controla) a tela de um **PC remoto**, com autenticação mútua por certificado, consentimento local e auditoria.
 
 Interface no padrão **Nexotool UI** (janela com barra azul-marinho, linha em degradê, cartões, tema claro/escuro automático).
 
@@ -18,37 +18,17 @@ dotnet build NexoDesk.sln -c Release
 dotnet test NexoDesk.sln -c Release
 ```
 
-## Colocar para funcionar (2 PCs)
+## Colocar para funcionar
 
-**No PC remoto (Agent)**, na conta de quem usa o PC:
+Passo a passo completo, do zero até a primeira conexão entre o **PC admin** (roda o Admin) e um **PC remoto** (roda o Agent): [`docs/tutorial.md`](docs/tutorial.md).
 
-```powershell
-# 1. Identidade do PC (anote a impressão SHA-256 mostrada)
-.\scripts\New-NexoDeskCertificate.ps1 -Role Agent -Name pc-oficina
-```
+Resumo:
 
-**No PC do administrador (Admin):**
-
-```powershell
-# 2. Identidade do administrador (anote a impressão)
-.\scripts\New-NexoDeskCertificate.ps1 -Role Admin -Name admin-gustavo
-```
-
-**De volta no PC remoto**, em PowerShell **como administrador**:
-
-```powershell
-# 3. Política, permissões e firewall restrito ao Tailscale
-.\scripts\Setup-NexoDeskAgent.ps1 -MachineId pc-oficina -DisplayName "PC Oficina" `
-    -ServerCertificateSha256 <impressão do passo 1> `
-    -AllowedAdmin "Gustavo=<impressão do passo 2>" `
-    -AgentExe "C:\NexoDesk\Agent\NexoDesk.Agent.exe" -Autostart
-```
-
-4. Abra o **NexoDesk Agent**: deve mostrar *Aguardando conexões* e o IP Tailscale.
-5. Abra o **NexoDesk Admin**: na primeira vez ele cria `%AppData%\NexoDesk\admin.json`. Clique em **Abrir configuração**, preencha `clientCertificateSha256` (passo 2) e adicione o PC em `machines` com `host` (MagicDNS ou IP 100.x) e `serverCertificateSha256` (passo 1). Clique em **Recarregar**.
-6. **Conectar** → no PC remoto aparece *Permitir acesso remoto?* → **Permitir**. A faixa *Acesso remoto ativo* fica no topo da tela até alguém clicar em **Encerrar acesso**.
-
-Ajuste também a política do Tailscale para só os administradores alcançarem a porta 47115 — exemplo em [`docs/security.md`](docs/security.md).
+1. **PC remoto:** `New-NexoDeskCertificate.ps1 -Role Agent` e anote a impressão.
+2. **PC admin:** `New-NexoDeskCertificate.ps1 -Role Admin` e anote a impressão.
+3. **PC remoto (como administrador):** `Setup-NexoDeskAgent.ps1` com as duas impressões; abra o Agent.
+4. **PC admin:** abra o Admin, preencha `admin.json` (impressão do PC admin e o PC remoto com a impressão dele), **Recarregar**, **Conectar**.
+5. **PC remoto:** clique em **Permitir**.
 
 ## Estrutura
 
@@ -68,6 +48,7 @@ NexoDesk.sln
 
 ## Documentação
 
+- [Tutorial: primeira conexão](docs/tutorial.md)
 - [Arquitetura e marcos](docs/architecture.md)
 - [Protocolo v1](docs/protocol.md)
 - [Segurança, certificados e revogação](docs/security.md)
