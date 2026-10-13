@@ -237,7 +237,11 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
         }
     }
 
-    /// <summary>FNV-1a sobre uma amostra dos pixels do bloco; detecta mudança sem varrer tudo.</summary>
+    /// <summary>
+    /// FNV-1a sobre TODOS os pixels do bloco (canais B, G, R de cada pixel). Varrer tudo garante
+    /// detectar mudanças minúsculas — um cursor piscando de 1 px, essencial em recuperação de dados —
+    /// que uma amostragem esparsa deixaria passar. O canal não usado (4º byte) é ignorado.
+    /// </summary>
     private static ulong HashTile(BitmapData data, int x, int y, int w, int h)
     {
         ulong hash = 1469598103934665603UL;
@@ -247,12 +251,13 @@ public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bo
             int stride = data.Stride;
             for (int r = 0; r < h; r++)
             {
-                byte* rowPtr = basePtr + (long)(y + r) * stride + (long)x * 4;
-                // Amostra alguns bytes por linha (passo 17) para ganhar velocidade.
-                for (int c = 0; c < w * 4; c += 17)
+                byte* p = basePtr + (long)(y + r) * stride + (long)x * 4;
+                byte* end = p + (long)w * 4;
+                for (; p < end; p += 4)
                 {
-                    hash ^= rowPtr[c];
-                    hash *= 1099511628211UL;
+                    hash = (hash ^ p[0]) * 1099511628211UL;
+                    hash = (hash ^ p[1]) * 1099511628211UL;
+                    hash = (hash ^ p[2]) * 1099511628211UL;
                 }
             }
         }
