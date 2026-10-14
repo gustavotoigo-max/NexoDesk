@@ -37,7 +37,7 @@ public sealed class H264ScreenSource : IH264FrameSource, IDisposable
         if (first is null)
             return null;
 
-        int fps = Math.Clamp(maxFps(), 5, 30);
+        int fps = 30; // H.264 roda a 30 fps para fluidez (independe do limite do modo imagem)
         // Taxa de bits-alvo conforme a qualidade escolhida (a tela parada gasta bem menos com baixa latência).
         int q = quality();
         int bitrate = q >= 96 ? 25_000_000 : q >= 90 ? 15_000_000 : 8_000_000;
@@ -49,7 +49,7 @@ public sealed class H264ScreenSource : IH264FrameSource, IDisposable
 
     public async Task<H264Frame?> NextH264FrameAsync(uint frameIndex, CancellationToken ct)
     {
-        int fps = Math.Clamp(_maxFps(), 5, 30);
+        int fps = 30;
         long interval = System.Diagnostics.Stopwatch.Frequency / fps;
         long now = System.Diagnostics.Stopwatch.GetTimestamp();
         if (_nextTicks == 0 || now - _nextTicks > interval * 4)

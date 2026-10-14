@@ -117,7 +117,7 @@ public sealed class H264Encoder : IDisposable
     /// Codifica um quadro BGRA. Devolve o(s) NAL(s) H.264 e se é keyframe, ou null se o encoder ainda
     /// não produziu saída para este quadro.
     /// </summary>
-    public H264Frame? Encode(uint frameIndex, ReadOnlySpan<byte> bgra, int stride)
+    public H264Frame? Encode(uint frameIndex, byte[] bgra, int stride)
     {
         if (_disposed || !_started)
             return null;
